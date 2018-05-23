@@ -5,12 +5,24 @@ import (
 	"log"
 
 	"github.com/alextanhongpin/go-github-scraper/api/github"
+	"github.com/alextanhongpin/go-github-scraper/internal/database"
 	"github.com/alextanhongpin/go-github-scraper/model"
 )
 
 func main() {
 	githubToken := flag.String("github_token", "", "The Github's access token used to make calls to the GraphQL endpoint")
+	dbName := flag.String("db_name", "scraper", "The name of the database")
+	dbHost := flag.String("db_host", "mongodb://myuser:mypass@localhost:27017", "The hostname of the database")
+
 	flag.Parse()
+
+	db := database.New(*dbHost, *dbName)
+	defer db.Close()
+
+	// Create a new collection with the session
+	// sess, users := db.Collection("users")
+	// defer sess.Close()
+	// users.Find()
 
 	gapi := github.New(*githubToken, "https://api.github.com/graphql", "Malaysia")
 	cursor := ""
