@@ -8,7 +8,7 @@ $ curl -H "Authorization: bearer token" -X POST -d " \
 " https://api.github.com/graphql
 ```
 
-## Sample Search Query
+## Sample Search User Query
 
 ```
 query {
@@ -204,6 +204,143 @@ Output:
             "company": "Chequesoftware",
             "avatarUrl": "https://avatars2.githubusercontent.com/u/35026306?v=4",
             "websiteUrl": "http://www.denariusoft.com/chequewritepro/"
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+## Sample Search Repo Query
+
+```bash
+query {
+  search(query: "user:alextanhongpin created:2018-01-02..2018-02-05", type: REPOSITORY, last: 10 ) {
+    repositoryCount,
+    pageInfo {
+      hasNextPage,
+      startCursor,
+      endCursor,
+      hasPreviousPage,
+    },
+    edges {
+      cursor,
+      node {
+        ...on Repository {
+          name,
+          createdAt,
+          updatedAt,
+          description
+        }
+      }
+    }
+  }
+}
+```
+
+Output:
+
+```bash
+{
+  "data": {
+    "search": {
+      "repositoryCount": 14,
+      "pageInfo": {
+        "hasNextPage": true,
+        "startCursor": "Y3Vyc29yOjE=",
+        "endCursor": "Y3Vyc29yOjEw",
+        "hasPreviousPage": false
+      },
+      "edges": [
+        {
+          "cursor": "Y3Vyc29yOjE=",
+          "node": {
+            "name": "stable-marriage-problem",
+            "createdAt": "2018-01-24T15:51:59Z",
+            "updatedAt": "2018-01-29T14:42:36Z",
+            "description": "Solving the Stable Marriage/Matching Problem with the Gale–Shapley algorithm"
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjI=",
+          "node": {
+            "name": "machine-learning-in-action",
+            "createdAt": "2018-01-19T14:01:41Z",
+            "updatedAt": "2018-01-19T14:02:13Z",
+            "description": "Tutorials from the book"
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjM=",
+          "node": {
+            "name": "trie",
+            "createdAt": "2018-01-14T16:30:16Z",
+            "updatedAt": "2018-01-14T16:30:32Z",
+            "description": "Sample code on Trie data structure"
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjQ=",
+          "node": {
+            "name": "go-twirp",
+            "createdAt": "2018-01-22T10:26:28Z",
+            "updatedAt": "2018-01-22T10:40:23Z",
+            "description": "Go Twirp"
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjU=",
+          "node": {
+            "name": "elixir-basic",
+            "createdAt": "2018-02-02T07:09:13Z",
+            "updatedAt": "2018-02-06T05:32:26Z",
+            "description": "Learning the basics of Elixir from Elixir School"
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjY=",
+          "node": {
+            "name": "dotnetcore-microservice",
+            "createdAt": "2018-02-01T16:07:51Z",
+            "updatedAt": "2018-02-18T04:48:51Z",
+            "description": "Sample microservice for .NET Core 2.0"
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjc=",
+          "node": {
+            "name": "json-schema-doca",
+            "createdAt": "2018-01-23T03:49:24Z",
+            "updatedAt": "2018-01-23T03:49:24Z",
+            "description": "Sample guide on generating JSON-Schema README documentation using Cloudflare's Doca"
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjg=",
+          "node": {
+            "name": "frecency",
+            "createdAt": "2018-01-02T05:51:36Z",
+            "updatedAt": "2018-01-02T05:51:36Z",
+            "description": "Implementation of Firefox's frecency algorithm - which is the combination of frequency and recency"
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjk=",
+          "node": {
+            "name": "docker-monitoring",
+            "createdAt": "2018-01-30T08:52:20Z",
+            "updatedAt": "2018-01-30T08:52:20Z",
+            "description": "Sample Docker monitoring with Prometheus"
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjEw",
+          "node": {
+            "name": "react-redux-boilerplate",
+            "createdAt": "2018-01-22T08:42:59Z",
+            "updatedAt": "2018-04-24T17:21:05Z",
+            "description": "Sample boilerplate for React-Redux"
           }
         }
       ]
