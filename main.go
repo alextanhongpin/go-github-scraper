@@ -1,77 +1,32 @@
 package main
 
 import (
-	"bytes"
-	"io/ioutil"
+	"flag"
 	"log"
-	"net/http"
-	"time"
+
+	"github.com/alextanhongpin/go-github-scraper/api/github"
+	"github.com/alextanhongpin/go-github-scraper/model"
 )
 
 func main() {
-	fetchGraphqlUser()
-	// s := &http.Server{
-	// 	Addr:           ":8080",
-	// 	Handler:        myHandler,
-	// 	ReadTimeout:    10 * time.Second,
-	// 	WriteTimeout:   10 * time.Second,
-	// 	MaxHeaderBytes: 1 << 20,
-	// }
-	// log.Fatal(s.ListenAndServe())
-}
+	githubToken := flag.String("github_token", "", "The Github's access token used to make calls to the GraphQL endpoint")
+	flag.Parse()
 
-func fetchGraphqlUser() error {
-	url := "https://api.github.com/graphql"
-
-	var jsonStr = []byte(`
-		{
-			"query": "query {
-				search(query: "location:malaysia created:2018-01-01..2018-01-10", type: USER, last: 10, after: "Y3Vyc29yOjIw") {
-					userCount,
-					pageInfo {
-						hasNextPage,
-						startCursor,
-						endCursor,
-						hasPreviousPage,
-					},
-					edges {
-						cursor,
-						node {
-							...on User {
-								name,
-								createdAt,
-								updatedAt,
-								login,
-								bio,
-								location,
-								email,
-								company,
-								avatarUrl,
-								websiteUrl
-							}
-						}
-					}
-				}
-			}
-		}"
-	`)
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-	// req.Header.Set("Authorization", "bearer token")
-	if err != nil {
-		return err
+	gapi := github.New(*githubToken, "https://api.github.com/graphql", "Malaysia")
+	cursor := ""
+	hasNextPage := true
+	var users []model.User
+	for hasNextPage {
+		res, err := gapi.FetchUsers("2018-01-01", "2018-02-01", cursor)
+		if err != nil {
+			break
+		}
+		log.Println("got user count:", res.Data.Search.UserCount)
+		hasNextPage = res.Data.Search.PageInfo.HasNextPage
+		cursor = res.Data.Search.PageInfo.EndCursor
+		for _, edge := range res.Data.Search.Edges {
+			users = append(users, edge.Node)
+		}
 	}
-	tr := &http.Transport{
-		MaxIdleConns:    10,
-		IdleConnTimeout: 30 * time.Second,
-	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	log.Println(string(body))
-	return nil
+	log.Println(len(users))
 }
