@@ -7,41 +7,31 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-func userToBSON(user model.User) bson.M {
-	return bson.M{
-		"name":       user.Name,
-		"createdAt":  user.CreatedAt,
-		"updatedAt":  user.UpdatedAt,
-		"login":      user.Login,
-		"bio":        user.Bio,
-		"location":   user.Location,
-		"email":      user.Email,
-		"company":    user.Company,
-		"avatarUrl":  user.AvatarURL,
-		"websiteUrl": user.WebsiteURL,
-	}
-}
-
 // Service provides the interface for the Service struct
 type Service interface {
+	Init() error
 	FindOne(login string) (*model.User, error)
-	BulkInsert(users []model.User) error
+	FindAll(limit int) ([]model.User, error)
+	Upsert(model.User) error
+	BulkUpsert(users []model.User) error
 }
 
 // service is a struct that holds service configuration
 type service struct {
 	db *database.DB
+	collection string
 }
 
 // New returns a new service
 func New(db *database.DB) Service {
 	return &service{
 		db: db,
+		collection: "users"
 	}
 }
 
 func (s *service) Init() error {
-	sess, c := s.db.Collection("users")
+	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
 	return c.EnsureIndex(mgo.Index{
@@ -51,7 +41,7 @@ func (s *service) Init() error {
 }
 
 func (s *service) FindOne(login string) (*model.User, error) {
-	sess, c := s.db.Collection("users")
+	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
 	var user model.User
@@ -64,8 +54,34 @@ func (s *service) FindOne(login string) (*model.User, error) {
 	return &user, nil
 }
 
-func (s *service) BulkInsert(users []model.User) error {
-	sess, c := s.db.Collection("users")
+func (s *service) FindAll(limit int) ([]model.User, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	var users []model.User
+	if err := c.Find(bson.M{}).
+		Limit(limit).
+		All(&users); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (s *service) Upsert(user model.User) error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	if _, err := c.Upsert(
+		bson.M{"login": user.Login},
+		bson.M{"$set": userToBSON(user)},
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *service) BulkUpsert(users []model.User) error {
+	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
 	bulk := c.Bulk()
@@ -82,30 +98,17 @@ func (s *service) BulkInsert(users []model.User) error {
 	return nil
 }
 
-func (s *service) Insert(user model.User) error {
-	sess, c := s.db.Collection("users")
-	defer sess.Close()
-
-	if _, err := c.Upsert(
-		bson.M{"login": user.Login},
-		bson.M{"$set": userToBSON(user)},
-	); err != nil {
-		return err
+func userToBSON(user model.User) bson.M {
+	return bson.M{
+		"name":       user.Name,
+		"createdAt":  user.CreatedAt,
+		"updatedAt":  user.UpdatedAt,
+		"login":      user.Login,
+		"bio":        user.Bio,
+		"location":   user.Location,
+		"email":      user.Email,
+		"company":    user.Company,
+		"avatarUrl":  user.AvatarURL,
+		"websiteUrl": user.WebsiteURL,
 	}
-	return nil
 }
-
-// // Sort by timestamp
-// err = c.Find(bson.M{"name": "Ale"}).Sort("-timestamp").All(&results)
-
-// var userColl []User
-// if err = users.Find(bson.M{}).All(&userColl); err != nil {
-// 	log.Println(err)
-// }
-// log.Printf("user: %#v\n count: %d", userColl, len(userColl))
-
-// change, err := users.RemoveAll(bson.M{})
-// if err != nil {
-// 	panic(err)
-// }
-// log.Println("change", change)

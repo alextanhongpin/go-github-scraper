@@ -231,7 +231,30 @@ query {
           name,
           createdAt,
           updatedAt,
-          description
+          description,
+          languages (last: 30) {
+            totalCount,
+            edges {
+              node {
+                name,
+                color
+              }
+            }
+          },
+          homepageUrl,
+          forkCount,
+          isFork,
+          nameWithOwner,
+          owner {
+            login,
+            avatarUrl
+          },
+          stargazers (last: 0) {
+						totalCount
+          },
+          watchers (last: 0) {
+            totalCount
+          }
         }
       }
     }
@@ -259,7 +282,74 @@ Output:
             "name": "stable-marriage-problem",
             "createdAt": "2018-01-24T15:51:59Z",
             "updatedAt": "2018-01-29T14:42:36Z",
-            "description": "Solving the Stable Marriage/Matching Problem with the Gale–Shapley algorithm"
+            "description": "Solving the Stable Marriage/Matching Problem with the Gale–Shapley algorithm",
+            "languages": {
+              "totalCount": 8,
+              "edges": [
+                {
+                  "node": {
+                    "name": "Jupyter Notebook",
+                    "color": "#DA5B0B"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "Haskell",
+                    "color": "#5e5086"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "JavaScript",
+                    "color": "#f1e05a"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "Scala",
+                    "color": "#c22d40"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "Go",
+                    "color": "#375eab"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "Rust",
+                    "color": "#dea584"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "C#",
+                    "color": "#178600"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "Elixir",
+                    "color": "#6e4a7e"
+                  }
+                }
+              ]
+            },
+            "homepageUrl": null,
+            "forkCount": 0,
+            "isFork": false,
+            "nameWithOwner": "alextanhongpin/stable-marriage-problem",
+            "owner": {
+              "login": "alextanhongpin",
+              "avatarUrl": "https://avatars3.githubusercontent.com/u/6033638?v=4"
+            },
+            "stargazers": {
+              "totalCount": 1
+            },
+            "watchers": {
+              "totalCount": 1
+            }
           }
         },
         {
@@ -268,7 +358,38 @@ Output:
             "name": "machine-learning-in-action",
             "createdAt": "2018-01-19T14:01:41Z",
             "updatedAt": "2018-01-19T14:02:13Z",
-            "description": "Tutorials from the book"
+            "description": "Tutorials from the book",
+            "languages": {
+              "totalCount": 2,
+              "edges": [
+                {
+                  "node": {
+                    "name": "Jupyter Notebook",
+                    "color": "#DA5B0B"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "Python",
+                    "color": "#3572A5"
+                  }
+                }
+              ]
+            },
+            "homepageUrl": null,
+            "forkCount": 0,
+            "isFork": false,
+            "nameWithOwner": "alextanhongpin/machine-learning-in-action",
+            "owner": {
+              "login": "alextanhongpin",
+              "avatarUrl": "https://avatars3.githubusercontent.com/u/6033638?v=4"
+            },
+            "stargazers": {
+              "totalCount": 0
+            },
+            "watchers": {
+              "totalCount": 1
+            }
           }
         },
         {
@@ -277,7 +398,32 @@ Output:
             "name": "trie",
             "createdAt": "2018-01-14T16:30:16Z",
             "updatedAt": "2018-01-14T16:30:32Z",
-            "description": "Sample code on Trie data structure"
+            "description": "Sample code on Trie data structure",
+            "languages": {
+              "totalCount": 1,
+              "edges": [
+                {
+                  "node": {
+                    "name": "Jupyter Notebook",
+                    "color": "#DA5B0B"
+                  }
+                }
+              ]
+            },
+            "homepageUrl": null,
+            "forkCount": 0,
+            "isFork": false,
+            "nameWithOwner": "alextanhongpin/trie",
+            "owner": {
+              "login": "alextanhongpin",
+              "avatarUrl": "https://avatars3.githubusercontent.com/u/6033638?v=4"
+            },
+            "stargazers": {
+              "totalCount": 0
+            },
+            "watchers": {
+              "totalCount": 1
+            }
           }
         },
         {
@@ -286,7 +432,32 @@ Output:
             "name": "go-twirp",
             "createdAt": "2018-01-22T10:26:28Z",
             "updatedAt": "2018-01-22T10:40:23Z",
-            "description": "Go Twirp"
+            "description": "Go Twirp",
+            "languages": {
+              "totalCount": 1,
+              "edges": [
+                {
+                  "node": {
+                    "name": "Go",
+                    "color": "#375eab"
+                  }
+                }
+              ]
+            },
+            "homepageUrl": null,
+            "forkCount": 0,
+            "isFork": false,
+            "nameWithOwner": "alextanhongpin/go-twirp",
+            "owner": {
+              "login": "alextanhongpin",
+              "avatarUrl": "https://avatars3.githubusercontent.com/u/6033638?v=4"
+            },
+            "stargazers": {
+              "totalCount": 0
+            },
+            "watchers": {
+              "totalCount": 1
+            }
           }
         },
         {
@@ -295,7 +466,32 @@ Output:
             "name": "elixir-basic",
             "createdAt": "2018-02-02T07:09:13Z",
             "updatedAt": "2018-02-06T05:32:26Z",
-            "description": "Learning the basics of Elixir from Elixir School"
+            "description": "Learning the basics of Elixir from Elixir School",
+            "languages": {
+              "totalCount": 1,
+              "edges": [
+                {
+                  "node": {
+                    "name": "Elixir",
+                    "color": "#6e4a7e"
+                  }
+                }
+              ]
+            },
+            "homepageUrl": null,
+            "forkCount": 0,
+            "isFork": false,
+            "nameWithOwner": "alextanhongpin/elixir-basic",
+            "owner": {
+              "login": "alextanhongpin",
+              "avatarUrl": "https://avatars3.githubusercontent.com/u/6033638?v=4"
+            },
+            "stargazers": {
+              "totalCount": 0
+            },
+            "watchers": {
+              "totalCount": 1
+            }
           }
         },
         {
@@ -304,7 +500,44 @@ Output:
             "name": "dotnetcore-microservice",
             "createdAt": "2018-02-01T16:07:51Z",
             "updatedAt": "2018-02-18T04:48:51Z",
-            "description": "Sample microservice for .NET Core 2.0"
+            "description": "Sample microservice for .NET Core 2.0",
+            "languages": {
+              "totalCount": 3,
+              "edges": [
+                {
+                  "node": {
+                    "name": "C#",
+                    "color": "#178600"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "CSS",
+                    "color": "#563d7c"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "JavaScript",
+                    "color": "#f1e05a"
+                  }
+                }
+              ]
+            },
+            "homepageUrl": null,
+            "forkCount": 0,
+            "isFork": false,
+            "nameWithOwner": "alextanhongpin/dotnetcore-microservice",
+            "owner": {
+              "login": "alextanhongpin",
+              "avatarUrl": "https://avatars3.githubusercontent.com/u/6033638?v=4"
+            },
+            "stargazers": {
+              "totalCount": 0
+            },
+            "watchers": {
+              "totalCount": 1
+            }
           }
         },
         {
@@ -313,7 +546,25 @@ Output:
             "name": "json-schema-doca",
             "createdAt": "2018-01-23T03:49:24Z",
             "updatedAt": "2018-01-23T03:49:24Z",
-            "description": "Sample guide on generating JSON-Schema README documentation using Cloudflare's Doca"
+            "description": "Sample guide on generating JSON-Schema README documentation using Cloudflare's Doca",
+            "languages": {
+              "totalCount": 0,
+              "edges": []
+            },
+            "homepageUrl": null,
+            "forkCount": 0,
+            "isFork": false,
+            "nameWithOwner": "alextanhongpin/json-schema-doca",
+            "owner": {
+              "login": "alextanhongpin",
+              "avatarUrl": "https://avatars3.githubusercontent.com/u/6033638?v=4"
+            },
+            "stargazers": {
+              "totalCount": 0
+            },
+            "watchers": {
+              "totalCount": 1
+            }
           }
         },
         {
@@ -322,7 +573,25 @@ Output:
             "name": "frecency",
             "createdAt": "2018-01-02T05:51:36Z",
             "updatedAt": "2018-01-02T05:51:36Z",
-            "description": "Implementation of Firefox's frecency algorithm - which is the combination of frequency and recency"
+            "description": "Implementation of Firefox's frecency algorithm - which is the combination of frequency and recency",
+            "languages": {
+              "totalCount": 0,
+              "edges": []
+            },
+            "homepageUrl": null,
+            "forkCount": 0,
+            "isFork": false,
+            "nameWithOwner": "alextanhongpin/frecency",
+            "owner": {
+              "login": "alextanhongpin",
+              "avatarUrl": "https://avatars3.githubusercontent.com/u/6033638?v=4"
+            },
+            "stargazers": {
+              "totalCount": 0
+            },
+            "watchers": {
+              "totalCount": 1
+            }
           }
         },
         {
@@ -331,7 +600,25 @@ Output:
             "name": "docker-monitoring",
             "createdAt": "2018-01-30T08:52:20Z",
             "updatedAt": "2018-01-30T08:52:20Z",
-            "description": "Sample Docker monitoring with Prometheus"
+            "description": "Sample Docker monitoring with Prometheus",
+            "languages": {
+              "totalCount": 0,
+              "edges": []
+            },
+            "homepageUrl": null,
+            "forkCount": 0,
+            "isFork": false,
+            "nameWithOwner": "alextanhongpin/docker-monitoring",
+            "owner": {
+              "login": "alextanhongpin",
+              "avatarUrl": "https://avatars3.githubusercontent.com/u/6033638?v=4"
+            },
+            "stargazers": {
+              "totalCount": 0
+            },
+            "watchers": {
+              "totalCount": 1
+            }
           }
         },
         {
@@ -340,7 +627,44 @@ Output:
             "name": "react-redux-boilerplate",
             "createdAt": "2018-01-22T08:42:59Z",
             "updatedAt": "2018-04-24T17:21:05Z",
-            "description": "Sample boilerplate for React-Redux"
+            "description": "Sample boilerplate for React-Redux",
+            "languages": {
+              "totalCount": 3,
+              "edges": [
+                {
+                  "node": {
+                    "name": "HTML",
+                    "color": "#e34c26"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "CSS",
+                    "color": "#563d7c"
+                  }
+                },
+                {
+                  "node": {
+                    "name": "JavaScript",
+                    "color": "#f1e05a"
+                  }
+                }
+              ]
+            },
+            "homepageUrl": null,
+            "forkCount": 0,
+            "isFork": false,
+            "nameWithOwner": "alextanhongpin/react-redux-boilerplate",
+            "owner": {
+              "login": "alextanhongpin",
+              "avatarUrl": "https://avatars3.githubusercontent.com/u/6033638?v=4"
+            },
+            "stargazers": {
+              "totalCount": 0
+            },
+            "watchers": {
+              "totalCount": 1
+            }
           }
         }
       ]
