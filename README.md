@@ -348,3 +348,70 @@ Output:
   }
 }
 ```
+
+
+## Golang mgo
+
+```go
+  // Set index
+  err := users.EnsureIndex(mgo.Index{
+		Key:    []string{"login"},
+		Unique: true,
+	})
+  // 
+	if err != nil {
+		panic(err)
+	}
+
+  // Bulk Upsert - it will insert the document if it doesn't exist yet - 
+  // at the same time, it will update the existing documents.
+  // The field `login` is unique
+	bulk := users.Bulk()
+	bulk.Upsert(bson.M{"login": "johndoe"}, bson.M{"$set": bson.M{"count": 1}})
+	bulk.Upsert(bson.M{"login": "alextanhongpin"}, bson.M{"$set": bson.M{"count": 10}})
+	bulk.Upsert(bson.M{"login": "hello"}, bson.M{"$set": bson.M{"count": 10}})
+	change, err := bulk.Run()
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println(change)
+
+	// Sort by timestamp
+	// err = c.Find(bson.M{"name": "Ale"}).Sort("-timestamp").All(&results)
+
+  // Single Upsert 
+	change, err := users.Upsert(
+		bson.M{"login": "alextanhongpin"},
+		bson.M{"$set": bson.M{
+			"timestamp": time.Now(),
+			"count":     10,
+		}},
+	)
+	if err != nil {
+		panic(err)
+	}
+	log.Println("change", change)
+
+  // Find  One
+	var user User
+	if err = users.Find(bson.M{"login": "alextanhongpin"}).
+		Select(bson.M{"login": 0}).
+		One(&user); err != nil {
+		log.Println(err)
+	}
+	log.Printf("user: %+v\n", user)
+
+  // Find All
+	var userColl []User
+	if err = users.Find(bson.M{}).All(&userColl); err != nil {
+		log.Println(err)
+	}
+	log.Printf("user: %#v\n count: %d", userColl, len(userColl))
+
+  // Remove All
+	change, err := users.RemoveAll(bson.M{})
+	if err != nil {
+		panic(err)
+	}
+	log.Println("change", change)
+```
