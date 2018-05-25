@@ -12,7 +12,7 @@ $ curl -H "Authorization: bearer token" -X POST -d " \
 
 ```
 query {
-  search(query: "location:malaysia created:2018-01-01..2018-01-10", type: USER, last: 10, after: "Y3Vyc29yOjIw") {
+  search(query: "location:malaysia created:2018-01-01..2018-02-01", type: USER, last: 10, after: ) {
     userCount,
     pageInfo {
       hasNextPage,
@@ -33,7 +33,19 @@ query {
           email,
           company,
           avatarUrl,
-          websiteUrl
+          websiteUrl,
+          repositories(last: 0) {
+            totalCount
+          },
+          gists(last: 0) {
+            totalCount
+          },
+          followers(last: 0) {
+            totalCount
+          },
+          following(last: 0) {
+            totalCount
+          },
         }
       }
     }
@@ -44,11 +56,10 @@ query {
 Output:
 
 ```json
-
 {
   "data": {
     "search": {
-      "userCount": 21,
+      "userCount": 77,
       "pageInfo": {
         "hasNextPage": true,
         "startCursor": "Y3Vyc29yOjE=",
@@ -59,6 +70,33 @@ Output:
         {
           "cursor": "Y3Vyc29yOjE=",
           "node": {
+            "name": "Dr.Saif Yousif",
+            "createdAt": "2018-01-29T08:41:08Z",
+            "updatedAt": "2018-04-01T13:46:19Z",
+            "login": "drsaifyousif",
+            "bio": "MDSC, Ph.D, CIW, PMP, CEH",
+            "location": "Malaysia",
+            "email": "",
+            "company": "ARID",
+            "avatarUrl": "https://avatars0.githubusercontent.com/u/35916074?v=4",
+            "websiteUrl": "arid.my/0001-0001",
+            "repositories": {
+              "totalCount": 1
+            },
+            "gists": {
+              "totalCount": 0
+            },
+            "followers": {
+              "totalCount": 4
+            },
+            "following": {
+              "totalCount": 0
+            }
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjI=",
+          "node": {
             "name": "Philip Khor",
             "createdAt": "2018-01-02T17:36:06Z",
             "updatedAt": "2018-05-01T11:35:07Z",
@@ -68,11 +106,131 @@ Output:
             "email": "",
             "company": "",
             "avatarUrl": "https://avatars2.githubusercontent.com/u/35039795?v=4",
-            "websiteUrl": "philip-khor.github.io"
+            "websiteUrl": "philip-khor.github.io",
+            "repositories": {
+              "totalCount": 4
+            },
+            "gists": {
+              "totalCount": 0
+            },
+            "followers": {
+              "totalCount": 2
+            },
+            "following": {
+              "totalCount": 3
+            }
           }
         },
         {
-          "cursor": "Y3Vyc29yOjI=",
+          "cursor": "Y3Vyc29yOjM=",
+          "node": {
+            "name": "Shouquat Mahmoud Mazumder",
+            "createdAt": "2018-01-27T17:01:41Z",
+            "updatedAt": "2018-05-23T04:15:51Z",
+            "login": "Shouquat",
+            "bio": "",
+            "location": "Malaysia",
+            "email": "shouquat4281@gmail.com",
+            "company": "",
+            "avatarUrl": "https://avatars3.githubusercontent.com/u/35873804?v=4",
+            "websiteUrl": "CRYPTO LOVER",
+            "repositories": {
+              "totalCount": 0
+            },
+            "gists": {
+              "totalCount": 0
+            },
+            "followers": {
+              "totalCount": 1
+            },
+            "following": {
+              "totalCount": 5
+            }
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjQ=",
+          "node": {
+            "name": "",
+            "createdAt": "2018-01-16T11:25:25Z",
+            "updatedAt": "2018-01-16T11:32:15Z",
+            "login": "ibc003",
+            "bio": "IBC003 is a online casino situated in the Malaysia Which provide the Malaysia sports betting ,online betting ,and many other games related the casino . ",
+            "location": "Kuala Lumpur ,Malaysia",
+            "email": "",
+            "company": "IBC003",
+            "avatarUrl": "https://avatars3.githubusercontent.com/u/35489758?v=4",
+            "websiteUrl": "https://ibc003.net/",
+            "repositories": {
+              "totalCount": 0
+            },
+            "gists": {
+              "totalCount": 0
+            },
+            "followers": {
+              "totalCount": 1
+            },
+            "following": {
+              "totalCount": 0
+            }
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjU=",
+          "node": {
+            "name": "Suhail",
+            "createdAt": "2018-01-28T04:02:27Z",
+            "updatedAt": "2018-04-04T09:50:36Z",
+            "login": "ryeshl",
+            "bio": "Newbie Data Scientist",
+            "location": "Kuala Lumpur, Malaysia",
+            "email": "",
+            "company": "",
+            "avatarUrl": "https://avatars1.githubusercontent.com/u/35884186?v=4",
+            "websiteUrl": "",
+            "repositories": {
+              "totalCount": 2
+            },
+            "gists": {
+              "totalCount": 1
+            },
+            "followers": {
+              "totalCount": 1
+            },
+            "following": {
+              "totalCount": 4
+            }
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjY=",
+          "node": {
+            "name": "Adrian Yeong",
+            "createdAt": "2018-01-25T03:18:44Z",
+            "updatedAt": "2018-04-27T02:01:11Z",
+            "login": "ayeong-SSI",
+            "bio": "",
+            "location": "Kuala Lumpur, Malaysia",
+            "email": "ayeong@servicesource.com",
+            "company": "Service Source",
+            "avatarUrl": "https://avatars1.githubusercontent.com/u/35789933?v=4",
+            "websiteUrl": "",
+            "repositories": {
+              "totalCount": 0
+            },
+            "gists": {
+              "totalCount": 0
+            },
+            "followers": {
+              "totalCount": 0
+            },
+            "following": {
+              "totalCount": 0
+            }
+          }
+        },
+        {
+          "cursor": "Y3Vyc29yOjc=",
           "node": {
             "name": "rohaizad",
             "createdAt": "2018-01-09T08:01:55Z",
@@ -83,127 +241,54 @@ Output:
             "email": "",
             "company": "",
             "avatarUrl": "https://avatars1.githubusercontent.com/u/35253967?v=4",
-            "websiteUrl": ""
-          }
-        },
-        {
-          "cursor": "Y3Vyc29yOjM=",
-          "node": {
-            "name": "Hoshito",
-            "createdAt": "2018-01-03T16:50:05Z",
-            "updatedAt": "2018-02-18T13:07:19Z",
-            "login": "Hoshitter1",
-            "bio": "Started learning Python on Jan 2018. Currently working on having twitter bot running on heroku (as of Feb'18)",
-            "location": "Japan(until Feb'18) Malaysia(until Feb'21)",
-            "email": "",
-            "company": "",
-            "avatarUrl": "https://avatars3.githubusercontent.com/u/35073785?v=4",
-            "websiteUrl": "twitter.com/hoshitter1"
-          }
-        },
-        {
-          "cursor": "Y3Vyc29yOjQ=",
-          "node": {
-            "name": "yuzinc",
-            "createdAt": "2018-01-01T03:54:16Z",
-            "updatedAt": "2018-01-01T03:55:33Z",
-            "login": "ciraxes",
-            "bio": "",
-            "location": "Malaysia",
-            "email": "",
-            "company": "",
-            "avatarUrl": "https://avatars1.githubusercontent.com/u/34994077?v=4",
-            "websiteUrl": ""
-          }
-        },
-        {
-          "cursor": "Y3Vyc29yOjU=",
-          "node": {
-            "name": "Izumi Inoue",
-            "createdAt": "2018-01-07T09:39:31Z",
-            "updatedAt": "2018-05-22T13:15:18Z",
-            "login": "izumiinoue",
-            "bio": "Founder @ Bereev | Non-Conforming Autodidact",
-            "location": "Malaysia",
-            "email": "",
-            "company": "",
-            "avatarUrl": "https://avatars0.githubusercontent.com/u/35189477?v=4",
-            "websiteUrl": ""
-          }
-        },
-        {
-          "cursor": "Y3Vyc29yOjY=",
-          "node": {
-            "name": "Saifulke",
-            "createdAt": "2018-01-09T14:00:43Z",
-            "updatedAt": "2018-05-10T04:31:21Z",
-            "login": "saifulke",
-            "bio": "Tak ada yang abadi",
-            "location": "Malaysia",
-            "email": "",
-            "company": "@corbemusic",
-            "avatarUrl": "https://avatars3.githubusercontent.com/u/35264073?v=4",
-            "websiteUrl": "https://www.youtube.com/channel/UCYGztGdclFSX_lRSuFhMEug"
-          }
-        },
-        {
-          "cursor": "Y3Vyc29yOjc=",
-          "node": {
-            "name": "Soo Kin Wah",
-            "createdAt": "2018-01-08T12:13:02Z",
-            "updatedAt": "2018-03-13T16:24:31Z",
-            "login": "kinwah123456",
-            "bio": "Always a learner! :D",
-            "location": "Malaysia",
-            "email": "",
-            "company": "",
-            "avatarUrl": "https://avatars0.githubusercontent.com/u/35223517?v=4",
-            "websiteUrl": ""
+            "websiteUrl": "",
+            "repositories": {
+              "totalCount": 1
+            },
+            "gists": {
+              "totalCount": 0
+            },
+            "followers": {
+              "totalCount": 0
+            },
+            "following": {
+              "totalCount": 1
+            }
           }
         },
         {
           "cursor": "Y3Vyc29yOjg=",
-          "node": {
-            "name": "Ariel Espina Mendoza",
-            "createdAt": "2018-01-10T09:26:03Z",
-            "updatedAt": "2018-05-21T16:45:41Z",
-            "login": "aemendoza072583",
-            "bio": "",
-            "location": "Kuala Lumpur, Malaysia",
-            "email": "",
-            "company": "",
-            "avatarUrl": "https://avatars0.githubusercontent.com/u/35292757?v=4",
-            "websiteUrl": ""
-          }
+          "node": {}
         },
         {
           "cursor": "Y3Vyc29yOjk=",
-          "node": {
-            "name": "nando teddy",
-            "createdAt": "2018-01-04T03:16:28Z",
-            "updatedAt": "2018-04-21T08:33:30Z",
-            "login": "ndoteddy",
-            "bio": "Proffesional Tech Engineer - Stay Fool - Stay Noob \r\n\r\n#JS #C#",
-            "location": "Malaysia",
-            "email": "",
-            "company": "@teddybrothers",
-            "avatarUrl": "https://avatars0.githubusercontent.com/u/35088152?v=4",
-            "websiteUrl": "linkedin.com/in/hernandoivanteddy/"
-          }
+          "node": {}
         },
         {
           "cursor": "Y3Vyc29yOjEw",
           "node": {
-            "name": "chequesoftware",
-            "createdAt": "2018-01-02T08:58:44Z",
-            "updatedAt": "2018-01-02T09:01:58Z",
-            "login": "chequesoftware",
-            "bio": "Looking for LOW PRICE ChequeWrtiePro Software in #MALAYSIA\r\nhttp://denariusoft.com/contactus.html\r\nFill the Form by Clicking the above LINK & Register your Deta",
-            "location": "Malaysia",
+            "name": "ZULFAHMYRIZAL",
+            "createdAt": "2018-01-18T07:05:38Z",
+            "updatedAt": "2018-01-18T07:26:16Z",
+            "login": "zulfahmyrizal",
+            "bio": "I am a PHP developer and started learning it from 2017 and continue to learn more in PHP. My aim to become finest in PHP and always ready to learn new things .",
+            "location": "MALAYSIA",
             "email": "",
-            "company": "Chequesoftware",
-            "avatarUrl": "https://avatars2.githubusercontent.com/u/35026306?v=4",
-            "websiteUrl": "http://www.denariusoft.com/chequewritepro/"
+            "company": "MYADSFX",
+            "avatarUrl": "https://avatars0.githubusercontent.com/u/35556796?v=4",
+            "websiteUrl": "http://www.myadsfx.com",
+            "repositories": {
+              "totalCount": 1
+            },
+            "gists": {
+              "totalCount": 0
+            },
+            "followers": {
+              "totalCount": 0
+            },
+            "following": {
+              "totalCount": 0
+            }
           }
         }
       ]
@@ -254,7 +339,8 @@ query {
           },
           watchers (last: 0) {
             totalCount
-          }
+          },
+          url
         }
       }
     }

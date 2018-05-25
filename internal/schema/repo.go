@@ -1,6 +1,11 @@
-package model
+package schema
 
-import "time"
+import (
+	"time"
+
+	"github.com/alextanhongpin/go-github-scraper/internal/util"
+	"gopkg.in/mgo.v2/bson"
+)
 
 // Repo represents the repository structure
 type Repo struct {
@@ -16,6 +21,33 @@ type Repo struct {
 	Owner         Owner      `json:"owner,omitempty"`
 	Stargazers    Stargazers `json:"stargazers,omitempty"`
 	Watchers      Watchers   `json:"watchers,omitempty"`
+	URL           string     `json:"url,omitempty"`
+}
+
+// BSON returns the repo as bson object
+func (r Repo) BSON() bson.M {
+	var languages []string
+	for _, lang := range r.Languages.Edges {
+		languages = append(languages, lang.Node.Name)
+	}
+	return bson.M{
+		"name":          r.Name,
+		"createdAt":     r.CreatedAt,
+		"updatedAt":     r.UpdatedAt,
+		"fetchedAt":     util.NewUTCDate(),
+		"description":   r.Description,
+		"languages":     languages,
+		"homepageUrl":   r.HomepageURL,
+		"isFork":        r.IsFork,
+		"forks":         r.ForkCount,
+		"nameWithOwner": r.NameWithOwner,
+		"stargazers":    r.Stargazers.TotalCount,
+		"watchers":      r.Watchers.TotalCount,
+		"login":         r.Owner.Login,
+		"avatarUrl":     r.Owner.AvatarURL,
+		"url":           r.URL,
+	}
+
 }
 
 // Language represents the language node of the repo
