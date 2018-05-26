@@ -9,24 +9,26 @@ import (
 )
 
 // Endpoints represents the services exposed as http routes
-type Endpoints interface {
-	GetUserCount() httprouter.Handle
-}
+type (
+	Endpoints interface {
+		GetUserCount() httprouter.Handle
+	}
 
-type endpoints struct {
-	api API
-}
+	endpoints struct {
+		model Model
+	}
+)
 
 // NewEndpoints returns a new route for the analytic service
-func NewEndpoints(api API) Endpoints {
+func NewEndpoints(model Model) Endpoints {
 	return &endpoints{
-		api: api,
+		model: model,
 	}
 }
 
 func (e *endpoints) GetUserCount() httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		count, err := e.api.GetUserCount()
+		count, err := e.model.GetUserCount()
 		util.ResponseJSON(w, count, err)
 	}
 }

@@ -5,11 +5,11 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-// New returns a new analytic service model
-func New(db *database.DB, collection string, r *httprouter.Router) {
+// NewService returns a new analytic service model
+func NewService(db *database.DB, collection string, r *httprouter.Router) {
 	store := NewStore(db, collection)
-	api := NewAPI(store)
-	endpoints := NewEndpoints(api)
+	model := NewModel(store)
+	endpoints := NewEndpoints(model)
 
 	r.GET("/analytics", endpoints.GetUserCount())
 }

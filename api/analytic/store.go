@@ -8,15 +8,17 @@ import (
 )
 
 // Store represents the interface for the analytic store
-type Store interface {
-	GetUserCount() (*UserCount, error)
-	PostUserCount(count int) error
-}
+type (
+	Store interface {
+		GetUserCount() (*UserCount, error)
+		PostUserCount(count int) error
+	}
 
-type store struct {
-	db         *database.DB
-	collection string
-}
+	store struct {
+		db         *database.DB
+		collection string
+	}
+)
 
 // NewStore returns a new analytic
 func NewStore(db *database.DB, collection string) Store {

@@ -17,3 +17,13 @@ type Repo struct {
 	Watchers      int64    `json:"watchers,omitempty" bson:"watchers,omitempty"`
 	URL           string   `json:"url,omitempty" bson:"url,omitempty"`
 }
+
+type Language struct {
+	Name  string `json:"name,omitempty" bson:"name,omitempty"`
+	Count int    `json:"count,omitempty" bson:"count,omitempty"`
+}
+
+type User struct {
+	Name  string `json:"name,omitempty" bson:"name,omitempty"`
+	Count int    `json:"count,omitempty" bson:"count,omitempty"`
+}
