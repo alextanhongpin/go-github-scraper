@@ -1,10 +1,8 @@
 package repo
 
 import (
-	"log"
-
+	"github.com/alextanhongpin/go-github-scraper/api/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/database"
-	"github.com/alextanhongpin/go-github-scraper/internal/schema"
 	"github.com/alextanhongpin/go-github-scraper/internal/util"
 
 	mgo "gopkg.in/mgo.v2"
@@ -12,28 +10,30 @@ import (
 )
 
 // Store provides the interface for the repo store
-type Store interface {
-	Init() error
-	FindOne(login string) (*Repo, error)
-	FindAll(limit int, sort []string) ([]Repo, error)
-	Upsert(schema.Repo) error
-	BulkUpsert(repos []schema.Repo) error
-	Count() (int, error)
-	AggregateLanguages(limit int) ([]Language, error)
-	AggregateReposByUser(limit int) ([]User, error)
-	AggregateLanguageByUser(login string, limit int) error
-	AggregateMostRecentReposByLanguage(language string, limit int) error
-	AggregateUsersByLanguage(language string, limit int) error
-}
+type (
+	Store interface {
+		Init() error
+		FindOne(login string) (*Repo, error)
+		FindAll(limit int, sort []string) ([]Repo, error)
+		Upsert(github.Repo) error
+		BulkUpsert(repos []github.Repo) error
+		Count() (int, error)
+		AggregateLanguages(limit int) ([]LanguageCount, error)
+		AggregateReposByUser(limit int) ([]UserCount, error)
+		AggregateLanguageByUser(login string, limit int) ([]LanguageCount, error)
+		AggregateMostRecentReposByLanguage(language string, limit int) ([]Repo, error)
+		AggregateReposByLanguage(language string, limit int) ([]Repo, error)
+	}
 
-// store is a struct that holds store configuration
-type store struct {
-	db         *database.DB
-	collection string
-}
+	// store is a struct that holds store configuration
+	store struct {
+		db         *database.DB
+		collection string
+	}
+)
 
-// New returns a new store
-func New(db *database.DB, collection string) Store {
+// NewStore returns a new store
+func NewStore(db *database.DB, collection string) Store {
 	return &store{
 		db:         db,
 		collection: collection,
@@ -77,7 +77,7 @@ func (s *store) FindAll(limit int, sort []string) ([]Repo, error) {
 	return repos, nil
 }
 
-func (s *store) Upsert(repo schema.Repo) error {
+func (s *store) Upsert(repo github.Repo) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
@@ -86,7 +86,7 @@ func (s *store) Upsert(repo schema.Repo) error {
 		bson.M{
 			"$set": repo.BSON(),
 			"$setOnInsert": bson.M{
-				"createdAt": util.NewUTCDate(),
+				"fetchedAt": util.NewUTCDate(),
 			},
 		},
 	); err != nil {
@@ -95,7 +95,7 @@ func (s *store) Upsert(repo schema.Repo) error {
 	return nil
 }
 
-func (s *store) BulkUpsert(repos []schema.Repo) error {
+func (s *store) BulkUpsert(repos []github.Repo) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
@@ -106,7 +106,7 @@ func (s *store) BulkUpsert(repos []schema.Repo) error {
 			bson.M{
 				"$set": repo.BSON(),
 				"$setOnInsert": bson.M{
-					"createdAt": util.NewUTCDate(),
+					"fetchedAt": util.NewUTCDate(),
 				},
 			},
 		)
@@ -124,7 +124,7 @@ func (s *store) Count() (int, error) {
 	return c.Count()
 }
 
-func (s *store) AggregateLanguages(limit int) ([]Language, error) {
+func (s *store) AggregateLanguages(limit int) ([]LanguageCount, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 	pipeline := []bson.M{
@@ -162,7 +162,7 @@ func (s *store) AggregateLanguages(limit int) ([]Language, error) {
 			},
 		},
 	}
-	var languages []Language
+	var languages []LanguageCount
 	if err := c.Pipe(pipeline).All(&languages); err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (s *store) AggregateLanguages(limit int) ([]Language, error) {
 }
 
 // AggregateReposByUser will return the repos by user
-func (s *store) AggregateReposByUser(limit int) ([]User, error) {
+func (s *store) AggregateReposByUser(limit int) ([]UserCount, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 	pipeline := []bson.M{
@@ -202,7 +202,7 @@ func (s *store) AggregateReposByUser(limit int) ([]User, error) {
 			},
 		},
 	}
-	var users []User
+	var users []UserCount
 	if err := c.Pipe(pipeline).All(&users); err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (s *store) AggregateReposByUser(limit int) ([]User, error) {
 }
 
 // AggregateLanguageByUser returns the user's languages count
-func (s *store) AggregateLanguageByUser(login string, limit int) error {
+func (s *store) AggregateLanguageByUser(login string, limit int) ([]LanguageCount, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 	pipeline := []bson.M{
@@ -249,17 +249,15 @@ func (s *store) AggregateLanguageByUser(login string, limit int) error {
 			},
 		},
 	}
-	var languages []Language
+	var languages []LanguageCount
 	if err := c.Pipe(pipeline).All(&languages); err != nil {
-		log.Println(err)
-		return err
+		return nil, err
 	}
-	log.Println(languages)
-	return nil
+	return languages, nil
 }
 
 // AggregateMostRecentReposByLanguage returns the most recent repos by language
-func (s *store) AggregateMostRecentReposByLanguage(language string, limit int) error {
+func (s *store) AggregateMostRecentReposByLanguage(language string, limit int) ([]Repo, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 	pipeline := []bson.M{
@@ -273,8 +271,20 @@ func (s *store) AggregateMostRecentReposByLanguage(language string, limit int) e
 				"isLanguage": bson.M{
 					"$in": []string{language, "$languages"},
 				},
-				"name":        1,
-				"description": 1,
+				"name":          1,
+				"createdAt":     1,
+				"updatedAt":     1,
+				"description":   1,
+				"languages":     1,
+				"homepageUrl":   1,
+				"forkCount":     1,
+				"isFork":        1,
+				"nameWithOwner": 1,
+				"login":         1,
+				"avatarUrl":     1,
+				"stargazers":    1,
+				"watchers":      1,
+				"url":           1,
 			},
 		},
 		bson.M{
@@ -291,17 +301,15 @@ func (s *store) AggregateMostRecentReposByLanguage(language string, limit int) e
 			"$limit": limit,
 		},
 	}
-	var languages []interface{}
-	if err := c.Pipe(pipeline).All(&languages); err != nil {
-		log.Println(err)
-		return err
+	var repos []Repo
+	if err := c.Pipe(pipeline).All(&repos); err != nil {
+		return nil, err
 	}
-	log.Println(languages)
-	return nil
+	return repos, nil
 }
 
-// AggregateUsersByLanguage returns the users by languages
-func (s *store) AggregateUsersByLanguage(language string, limit int) error {
+// AggregateReposByLanguage returns the users by languages
+func (s *store) AggregateReposByLanguage(language string, limit int) ([]Repo, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 	pipeline := []bson.M{
@@ -315,9 +323,20 @@ func (s *store) AggregateUsersByLanguage(language string, limit int) error {
 				"isLanguage": bson.M{
 					"$in": []string{language, "$languages"},
 				},
-				"name":        1,
-				"description": 1,
-				"login":       1,
+				"name":          1,
+				"createdAt":     1,
+				"updatedAt":     1,
+				"description":   1,
+				"languages":     1,
+				"homepageUrl":   1,
+				"forkCount":     1,
+				"isFork":        1,
+				"nameWithOwner": 1,
+				"login":         1,
+				"avatarUrl":     1,
+				"stargazers":    1,
+				"watchers":      1,
+				"url":           1,
 			},
 		},
 		bson.M{
@@ -341,19 +360,11 @@ func (s *store) AggregateUsersByLanguage(language string, limit int) error {
 		bson.M{
 			"$limit": limit,
 		},
-		// bson.M{
-		// 	"$project": bson.M{
-		// 		"count": 1,
-		// 		"name":  "$_id.language",
-		// 		"_id":   0,
-		// 	},
-		// },
 	}
-	var languages []interface{}
-	if err := c.Pipe(pipeline).All(&languages); err != nil {
-		log.Println(err)
-		return err
+	var repos []Repo
+	if err := c.Pipe(pipeline).All(&repos); err != nil {
+		return nil, err
 	}
-	log.Println(languages)
-	return nil
+
+	return repos, nil
 }

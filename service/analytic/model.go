@@ -3,6 +3,7 @@ package analytic
 // Model represents the interface for the analytic business logic
 type (
 	Model interface {
+		Init() error
 		GetUserCount() (*UserCount, error)
 		PostUserCount(count int) error
 	}
@@ -17,6 +18,10 @@ func NewModel(s Store) Model {
 	return &model{
 		store: s,
 	}
+}
+
+func (m *model) Init() error {
+	return m.store.Init()
 }
 
 func (m *model) GetUserCount() (*UserCount, error) {

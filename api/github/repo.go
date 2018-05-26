@@ -1,27 +1,26 @@
-package schema
+package github
 
 import (
 	"time"
 
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
 	"gopkg.in/mgo.v2/bson"
 )
 
 // Repo represents the repository structure
 type Repo struct {
-	Name          string     `json:"name,omitempty"`
-	CreatedAt     time.Time  `json:"createdAt,omitempty"`
-	UpdatedAt     time.Time  `json:"updatedAt,omitempty"`
-	Description   string     `json:"description,omitempty"`
-	Languages     Language   `json:"languages,omitempty"`
-	HomepageURL   string     `json:"homepageUrl,omitempty"`
-	ForkCount     int64      `json:"forkCount,omitempty"`
-	IsFork        bool       `json:"isFork,omitempty"`
-	NameWithOwner string     `json:"nameWithOwner,omitempty"`
-	Owner         Owner      `json:"owner,omitempty"`
-	Stargazers    Stargazers `json:"stargazers,omitempty"`
-	Watchers      Watchers   `json:"watchers,omitempty"`
-	URL           string     `json:"url,omitempty"`
+	Name          string     `json:"name,omitempty" bson:"name,omitempty"`
+	CreatedAt     time.Time  `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
+	UpdatedAt     time.Time  `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
+	Description   string     `json:"description,omitempty" bson:"description,omitempty"`
+	Languages     Language   `json:"languages,omitempty" bson:"languages,omitempty"`
+	HomepageURL   string     `json:"homepageUrl,omitempty" bson:"homepageUrl,omitempty"`
+	ForkCount     int64      `json:"forkCount,omitempty" bson:"forkCount,omitempty"`
+	IsFork        bool       `json:"isFork,omitempty" bson:"isFork,omitempty"`
+	NameWithOwner string     `json:"nameWithOwner,omitempty" bson:"nameWithOwner,omitempty"`
+	Owner         Owner      `json:"owner,omitempty" bson:"owner,omitempty"`
+	Stargazers    Stargazers `json:"stargazers,omitempty" bson:"stargazers,omitempty"`
+	Watchers      Watchers   `json:"watchers,omitempty" bson:"watchers,omitempty"`
+	URL           string     `json:"url,omitempty" bson:"url,omitempty"`
 }
 
 // BSON returns the repo as bson object
@@ -32,9 +31,8 @@ func (r Repo) BSON() bson.M {
 	}
 	return bson.M{
 		"name":          r.Name,
-		"createdAt":     r.CreatedAt,
-		"updatedAt":     r.UpdatedAt,
-		"fetchedAt":     util.NewUTCDate(),
+		"createdAt":     r.CreatedAt.UTC().Format(time.RFC3339),
+		"updatedAt":     r.UpdatedAt.UTC().Format(time.RFC3339),
 		"description":   r.Description,
 		"languages":     languages,
 		"homepageUrl":   r.HomepageURL,
@@ -47,7 +45,6 @@ func (r Repo) BSON() bson.M {
 		"avatarUrl":     r.Owner.AvatarURL,
 		"url":           r.URL,
 	}
-
 }
 
 // Language represents the language node of the repo

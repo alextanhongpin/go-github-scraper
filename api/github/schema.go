@@ -2,8 +2,6 @@ package github
 
 import (
 	"fmt"
-
-	"github.com/alextanhongpin/go-github-scraper/api/github"
 )
 
 // GraphQLQuery represents the structure for the Github's GraphQL API calls
@@ -29,9 +27,16 @@ type FetchUsersRequest struct {
 }
 
 func (f FetchUsersRequest) String() string {
+	var cursor string
+	if f.Cursor == "" {
+		cursor = ""
+	} else {
+		// String must be quoted for the graphql api to work
+		cursor = fmt.Sprintf(`"%s"`, f.Cursor)
+	}
 	return fmt.Sprintf(`
 		query {
-			search(query: "location:%s created:%s..%s", type: USER, last: %d, after: %s) {
+			search(query: "location:%s created:%s..%s", type: USER, first: %d, after: %s) {
 				userCount,
 				pageInfo {
 					startCursor,
@@ -69,7 +74,7 @@ func (f FetchUsersRequest) String() string {
 					}
 				}
 			}
-		}`, f.Location, f.Start, f.End, f.Limit, f.Cursor)
+		}`, f.Location, f.Start, f.End, f.Limit, cursor)
 }
 
 // FetchUsersResponse represents the GraphQL's user data structure
@@ -84,9 +89,9 @@ type UserData struct {
 
 // SearchUser represents the GraphQL's search user data structure
 type SearchUser struct {
-	UserCount int64           `json:"userCount,omitempty"`
-	PageInfo  github.PageInfo `json:"pageInfo,omitempty"`
-	Edges     []UserEdge      `json:"edges,omitempty"`
+	UserCount int64      `json:"userCount,omitempty"`
+	PageInfo  PageInfo   `json:"pageInfo,omitempty"`
+	Edges     []UserEdge `json:"edges,omitempty"`
 }
 
 // UserEdge represents the GraphQL's user edge data structure
@@ -105,8 +110,14 @@ type FetchReposRequest struct {
 }
 
 func (f FetchReposRequest) String() string {
+	var cursor string
+	if f.Cursor == "" {
+		cursor = ""
+	} else {
+		cursor = fmt.Sprintf(`"%s"`, f.Cursor)
+	}
 	return fmt.Sprintf(`query {
-		search(query: "user:%s created:%s..%s", type: REPOSITORY, last: %d, after: %s) {
+		search(query: "user:%s created:%s..%s", type: REPOSITORY, first: %d, after: %s) {
 			repositoryCount,
 			pageInfo {
 				hasNextPage,
@@ -150,7 +161,7 @@ func (f FetchReposRequest) String() string {
 				}
 			}
 		}
-	}`, f.Login, f.Start, f.End, f.Limit, f.Cursor)
+	}`, f.Login, f.Start, f.End, f.Limit, cursor)
 }
 
 // FetchReposResponse represents the GraphQL's repo data structure

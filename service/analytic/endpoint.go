@@ -20,10 +20,10 @@ type (
 )
 
 // NewEndpoints returns a new route for the analytic service
-func NewEndpoints(model Model) Endpoints {
-	return &endpoints{
-		model: model,
-	}
+func NewEndpoints(model Model, r *httprouter.Router) {
+	e := &endpoints{model: model}
+
+	r.GET("/analytics", e.GetUserCount())
 }
 
 func (e *endpoints) GetUserCount() httprouter.Handle {

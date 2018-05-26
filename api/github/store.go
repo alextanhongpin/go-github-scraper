@@ -5,27 +5,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/util"
 )
 
 // Store represents the interface for the Github Service
-type Store interface {
-	FetchUsers(location, start, end, cursor string) (*FetchUsersResponse, error)
-	FetchRepos(login, start, end, cursor string) (*FetchReposResponse, error)
-}
+type (
+	Store interface {
+		FetchUsers(req FetchUsersRequest) (*FetchUsersResponse, error)
+		FetchRepos(req FetchReposRequest) (*FetchReposResponse, error)
+	}
 
-// store holds the store configuration
-type store struct {
-	client   *http.Client
-	token    string
-	endpoint string
-}
+	// store holds the store configuration
+	store struct {
+		client   *http.Client
+		token    string
+		endpoint string
+	}
+)
 
-// New returns a new store
-func New(token, endpoint string) Store {
+// NewStore returns a new store
+func NewStore(token, endpoint string) Store {
 	return &store{
 		client:   util.NewHTTPClient(),
 		token:    token,
@@ -33,11 +34,10 @@ func New(token, endpoint string) Store {
 	}
 }
 
-func (s *store) FetchUsers(location, start, end, cursor string) (*FetchUsersResponse, error) {
-	body := FetchUsersRequest(location, start, end, cursor, 10)
-	jsonBytes, err := json.Marshal(GraphQLQuery{body.String()})
+func (s *store) FetchUsers(req FetchUsersRequest) (*FetchUsersResponse, error) {
+	jsonBytes, err := json.Marshal(GraphQLQuery{req.String()})
 	if err != nil {
-		log.Println(err)
+		return nil, err
 	}
 
 	jsonResp, err := graphqlService(s.client, s.token, s.endpoint, jsonBytes)
@@ -51,18 +51,17 @@ func (s *store) FetchUsers(location, start, end, cursor string) (*FetchUsersResp
 	return &resp, nil
 }
 
-func (s *store) FetchRepos(login, start, end, cursor string) (*FetchReposResponse, error) {
-	body := FetchReposRequest(login, start, end, cursor, 10)
-	jsonBytes, err := json.Marshal(GraphQLQuery{body.String()})
+func (s *store) FetchRepos(req FetchReposRequest) (*FetchReposResponse, error) {
+	jsonBytes, err := json.Marshal(GraphQLQuery{req.String()})
 	if err != nil {
-		log.Println(err)
+		return nil, err
 	}
 
 	jsonResp, err := graphqlService(s.client, s.token, s.endpoint, jsonBytes)
 	if err != nil {
 		return nil, err
 	}
-	log.Println(string(jsonResp))
+
 	var resp FetchReposResponse
 	if err := json.Unmarshal(jsonResp, &resp); err != nil {
 		return nil, err

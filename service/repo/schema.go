@@ -5,6 +5,7 @@ type Repo struct {
 	Name          string   `json:"name,omitempty" bson:"name,omitempty"`
 	CreatedAt     string   `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 	UpdatedAt     string   `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
+	FetchedAt     string   `json:"fetchedAt,omitempty" bson:"fetchedAt,omitempty"`
 	Description   string   `json:"description,omitempty" bson:"description,omitempty"`
 	Languages     []string `json:"languages,omitempty" bson:"languages,omitempty"`
 	HomepageURL   string   `json:"homepageUrl,omitempty" bson:"homepageUrl,omitempty"`
@@ -18,12 +19,14 @@ type Repo struct {
 	URL           string   `json:"url,omitempty" bson:"url,omitempty"`
 }
 
-type Language struct {
+// LanguageCount represents the language and the count
+type LanguageCount struct {
 	Name  string `json:"name,omitempty" bson:"name,omitempty"`
 	Count int    `json:"count,omitempty" bson:"count,omitempty"`
 }
 
-type User struct {
+// UserCount represents the user and the count
+type UserCount struct {
 	Name  string `json:"name,omitempty" bson:"name,omitempty"`
 	Count int    `json:"count,omitempty" bson:"count,omitempty"`
 }

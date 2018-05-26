@@ -4,12 +4,14 @@ import (
 	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/database"
+	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
 // Store represents the interface for the analytic store
 type (
 	Store interface {
+		Init() error
 		GetUserCount() (*UserCount, error)
 		PostUserCount(count int) error
 	}
@@ -26,6 +28,16 @@ func NewStore(db *database.DB, collection string) Store {
 		db:         db,
 		collection: collection,
 	}
+}
+
+func (s *store) Init() error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	return c.EnsureIndex(mgo.Index{
+		Key:    []string{"type"},
+		Unique: true,
+	})
 }
 
 func (s *store) GetUserCount() (*UserCount, error) {

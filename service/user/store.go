@@ -1,31 +1,35 @@
 package user
 
 import (
+	"github.com/alextanhongpin/go-github-scraper/api/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/database"
-	"github.com/alextanhongpin/go-github-scraper/internal/schema"
 	"github.com/alextanhongpin/go-github-scraper/internal/util"
+
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
 // Store provides the interface for the Service struct
-type Store interface {
-	Init() error
-	FindOne(login string) (*User, error)
-	FindAll(limit int, sort []string) ([]User, error)
-	Upsert(schema.User) error
-	BulkUpsert(users []schema.User) error
-	Count() (int, error)
-}
+type (
+	Store interface {
+		Init() error
+		FindOne(login string) (*User, error)
+		FindAll(limit int, sort []string) ([]User, error)
+		Upsert(github.User) error
+		BulkUpsert(users []github.User) error
+		Count() (int, error)
+		Drop() error
+	}
 
-// store is a struct that holds service configuration
-type store struct {
-	db         *database.DB
-	collection string
-}
+	// store is a struct that holds service configuration
+	store struct {
+		db         *database.DB
+		collection string
+	}
+)
 
-// New returns a new service
-func New(db *database.DB, collection string) Store {
+// NewStore returns a new service
+func NewStore(db *database.DB, collection string) Store {
 	return &store{
 		db:         db,
 		collection: collection,
@@ -69,7 +73,7 @@ func (s *store) FindAll(limit int, sort []string) ([]User, error) {
 	return users, nil
 }
 
-func (s *store) Upsert(user schema.User) error {
+func (s *store) Upsert(user github.User) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
@@ -78,7 +82,6 @@ func (s *store) Upsert(user schema.User) error {
 		bson.M{
 			"$set": user.BSON(),
 			"$setOnInsert": bson.M{
-				"createdAt": util.NewUTCDate(),
 				"fetchedAt": util.NewUTCDate(),
 			},
 		},
@@ -88,7 +91,7 @@ func (s *store) Upsert(user schema.User) error {
 	return nil
 }
 
-func (s *store) BulkUpsert(users []schema.User) error {
+func (s *store) BulkUpsert(users []github.User) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
@@ -99,7 +102,6 @@ func (s *store) BulkUpsert(users []schema.User) error {
 			bson.M{
 				"$set": user.BSON(),
 				"$setOnInsert": bson.M{
-					"createdAt": util.NewUTCDate(),
 					"fetchedAt": util.NewUTCDate(),
 				},
 			},
@@ -116,4 +118,10 @@ func (s *store) Count() (int, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 	return c.Count()
+}
+
+func (s *store) Drop() error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	return c.DropCollection()
 }
