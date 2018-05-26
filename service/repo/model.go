@@ -2,6 +2,7 @@ package repo
 
 import (
 	"log"
+	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/api/github"
 )
@@ -19,6 +20,7 @@ type (
 		MostRecentReposByLanguage(language string, limit int) ([]Repo, error)
 		ReposByLanguage(language string, limit int) ([]Repo, error)
 		BulkUpsert(repos []github.Repo) error
+		FindLastCreatedByUser(login string) (string, bool)
 	}
 
 	model struct {
@@ -72,4 +74,19 @@ func (m *model) ReposByLanguage(language string, limit int) ([]Repo, error) {
 func (m *model) BulkUpsert(repos []github.Repo) error {
 	log.Printf("repo.model.BulkUpsert repoCount:%d\n", len(repos))
 	return m.store.BulkUpsert(repos)
+}
+
+// FindLastCreatedByUser returns the date of the last created repo in the format 2006-01-02
+func (m *model) FindLastCreatedByUser(login string) (string, bool) {
+	log.Printf("repo.model.FindLastCreatedByUser login:%s\n", login)
+	repo, err := m.store.FindLastCreatedByUser(login)
+	if err != nil || repo == nil {
+		// Github's creation date
+		return "2008-04-01", false
+	}
+	t, err := time.Parse(time.RFC3339, repo.CreatedAt)
+	if err != nil {
+		return "2008-04-01", false
+	}
+	return t.Format("2006-01-02"), true
 }

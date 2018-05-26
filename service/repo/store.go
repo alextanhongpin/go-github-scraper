@@ -13,8 +13,9 @@ import (
 type (
 	Store interface {
 		Init() error
-		FindOne(login string) (*Repo, error)
+		FindOne(nameWithOwner string) (*Repo, error)
 		FindAll(limit int, sort []string) ([]Repo, error)
+		FindLastCreatedByUser(login string) (*Repo, error)
 		Upsert(github.Repo) error
 		BulkUpsert(repos []github.Repo) error
 		Count() (int, error)
@@ -50,12 +51,12 @@ func (s *store) Init() error {
 	})
 }
 
-func (s *store) FindOne(login string) (*Repo, error) {
+func (s *store) FindOne(nameWithOwner string) (*Repo, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
 	var repo Repo
-	if err := c.Find(bson.M{"nameWithOwner": login}).
+	if err := c.Find(bson.M{"nameWithOwner": nameWithOwner}).
 		One(&repo); err != nil {
 		return nil, err
 	}
@@ -75,6 +76,21 @@ func (s *store) FindAll(limit int, sort []string) ([]Repo, error) {
 		return nil, err
 	}
 	return repos, nil
+}
+
+func (s *store) FindLastCreatedByUser(login string) (*Repo, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	var repo Repo
+	if err := c.Find(bson.M{
+		"login": login,
+	}).
+		Sort("-createdAt").
+		One(&repo); err != nil {
+		return nil, err
+	}
+	return &repo, nil
 }
 
 func (s *store) Upsert(repo github.Repo) error {

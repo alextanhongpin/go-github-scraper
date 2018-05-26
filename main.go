@@ -73,11 +73,14 @@ func main() {
 	// 	log.Fatal(err)
 	// }
 
-	if count, err := rsvc.MostRecent(5); err != nil {
-		log.Fatal(err)
-	} else {
-		log.Printf("most recent repos: %#v", count)
-	}
+	// if count, err := rsvc.MostRecent(5); err != nil {
+	// 	log.Fatal(err)
+	// } else {
+	// 	log.Printf("most recent repos: %#v", count)
+	// }
+
+	lastCreated, ok := rsvc.FindLastCreatedByUser("alextanhongpin")
+	log.Println(lastCreated, ok)
 
 	// Setup endpoints
 	r := httprouter.New()
