@@ -1,6 +1,8 @@
 package reposvc
 
 import (
+	"sort"
+
 	"github.com/alextanhongpin/go-github-scraper/api/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/database"
 	"github.com/alextanhongpin/go-github-scraper/internal/schema"
@@ -8,6 +10,8 @@ import (
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
+
+var stopwords = []string{"i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now"}
 
 // Store provides the interface for the repo store
 type (
@@ -28,6 +32,7 @@ type (
 		WatchersFor(login string) (int64, error)
 		StargazersFor(login string) (int64, error)
 		ForksFor(login string) (int64, error)
+		WordCount(login string, limit int) ([]WordCount, error)
 	}
 
 	// store is a struct that holds store configuration
@@ -480,4 +485,48 @@ func (s *store) ForksFor(login string) (int64, error) {
 		return 0, err
 	}
 	return forks.Count, nil
+}
+
+func (s *store) WordCount(login string, limit int) ([]WordCount, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	job := &mgo.MapReduce{
+		Map: `function () {
+			var stopwords = ["i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now"]
+			var desc = this.description
+			if (desc) {
+				desc = desc.replace(/[^a-zA-Z ]/g, '') 
+				desc = desc.toLowerCase().split(' ')
+				desc = desc.filter(function (d) {
+					return !stopwords.includes(d)
+				})
+        for (var i = desc.length - 1; i >= 0; i--) {
+            // might want to remove punctuation, etc. here
+            if (desc[i])  {      // make sure there's something
+               emit(desc[i], 1); // store a 1 for each word
+            }
+        }
+			}
+		}`,
+		Reduce: `function (key, values) {
+			var count = 0
+			values.forEach(function (v) {
+				count += v
+			})
+			return count
+		}`,
+	}
+
+	var res []WordCount
+	if _, err := c.Find(bson.M{
+		"login": login,
+	}).MapReduce(job, &res); err != nil {
+		return nil, err
+	}
+
+	sort.SliceStable(res, func(i, j int) bool {
+		return res[i].Value > res[j].Value
+	})
+	return res[:20], nil
 }

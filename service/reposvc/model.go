@@ -105,3 +105,7 @@ func (m *model) StargazersFor(login string) (int64, error) {
 func (m *model) ForksFor(login string) (int64, error) {
 	return m.store.ForksFor(login)
 }
+
+func (m *model) WordCount(login string, limit int) ([]WordCount, error) {
+	return m.store.WordCount(login, limit)
+}

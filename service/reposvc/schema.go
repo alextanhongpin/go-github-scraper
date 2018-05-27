@@ -15,3 +15,8 @@ type Stargazers struct {
 type Forks struct {
 	Count int64 `json:"count,omitempty" bson:"count,omitempty"`
 }
+
+type WordCount struct {
+	ID    string `json:"_id,omitempty" bson:"_id"`
+	Value int    `json:"value,omitempty"`
+}
