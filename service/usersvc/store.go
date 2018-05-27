@@ -15,6 +15,7 @@ type (
 		Init() error
 		FindOne(login string) (*User, error)
 		FindAll(limit int, sort []string) ([]User, error)
+		PickLogin() ([]string, error)
 		FindLastCreated() (*User, error)
 		Upsert(github.User) error
 		BulkUpsert(users []github.User) error
@@ -86,6 +87,34 @@ func (s *store) FindLastCreated() (*User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// PickLogin takes the login field
+func (s *store) PickLogin() ([]string, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	pipeline := []bson.M{
+		bson.M{
+			"$group": bson.M{
+				"_id": nil,
+				"logins": bson.M{
+					"$push": "$login",
+				},
+			},
+		},
+		bson.M{
+			"$project": bson.M{
+				"items": "$logins",
+			},
+		},
+	}
+
+	var i Logins
+	if err := c.Pipe(pipeline).One(&i); err != nil {
+		return i.Items, err
+	}
+	return i.Items, nil
 }
 
 func (s *store) Upsert(user github.User) error {

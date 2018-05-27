@@ -1,12 +1,15 @@
 package worker
 
 import (
+	"context"
+	"sync"
 	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/api/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/schema"
 	"github.com/alextanhongpin/go-github-scraper/internal/util"
 	"github.com/alextanhongpin/go-github-scraper/service/analyticsvc"
+	"github.com/alextanhongpin/go-github-scraper/service/profilesvc"
 	"github.com/alextanhongpin/go-github-scraper/service/reposvc"
 	"github.com/alextanhongpin/go-github-scraper/service/usersvc"
 
@@ -21,24 +24,28 @@ type (
 		NewFetchUsers(tab string) *cron.Cron
 		NewFetchRepos(tab string) *cron.Cron
 		NewAnalyticBuilder(tab string) *cron.Cron
+		NewProfileBuilder(tab string) *cron.Cron
+		// NewMatchingBuilder (tab string)*cron.Cron
 	}
 
 	worker struct {
 		gsvc github.API
 		asvc analyticsvc.Service
-		usvc usersvc.Service
+		psvc profilesvc.Service
 		rsvc reposvc.Service
+		usvc usersvc.Service
 		zlog *zap.Logger
 	}
 )
 
 // New creates a new worker
-func New(gsvc github.API, asvc analyticsvc.Service, usvc usersvc.Service, rsvc reposvc.Service, zlog *zap.Logger) Worker {
+func New(gsvc github.API, asvc analyticsvc.Service, psvc profilesvc.Service, rsvc reposvc.Service, usvc usersvc.Service, zlog *zap.Logger) Worker {
 	return &worker{
 		gsvc: gsvc,
 		asvc: asvc,
 		usvc: usvc,
 		rsvc: rsvc,
+		psvc: psvc,
 		zlog: zlog,
 	}
 }
@@ -251,5 +258,119 @@ func (w *worker) NewAnalyticBuilder(tab string) *cron.Cron {
 		}
 		zlog.Info("NewAnalyticBuilder", zap.Bool("ran", true))
 	})
+	return c
+}
+
+func (w *worker) NewProfileBuilder(tab string) *cron.Cron {
+	zlog := util.LoggerWithRequestID(w.zlog)
+	maxWorkers := 16
+
+	c := cron.New()
+	c.AddFunc(tab, func() {})
+
+	go func() {
+
+		zlog.Info("start cron", zap.String("type", "build_profile"))
+
+		logins, err := w.rsvc.DistinctLogin()
+		if err != nil {
+			zlog.Warn("error getting distinct login", zap.Error(err))
+			return
+		}
+		zlog.Info("got distinct logins",
+			zap.Int("count", len(logins)))
+
+		buildProfile := func(l string) schema.Profile {
+			watchers, err := w.rsvc.WatchersFor(l)
+			if err != nil {
+				zlog.Warn("error getting watcher count", zap.String("login", l), zap.Error(err))
+			}
+			stargazers, err := w.rsvc.StargazersFor(l)
+			if err != nil {
+				zlog.Warn("error getting stargazer count", zap.String("login", l), zap.Error(err))
+			}
+			forks, err := w.rsvc.ForksFor(l)
+			if err != nil {
+				zlog.Warn("error getting fork count", zap.String("login", l), zap.Error(err))
+			}
+			keywords, err := w.rsvc.KeywordsFor(l, 20)
+			if err != nil {
+				zlog.Warn("error getting keyword count", zap.String("login", l), zap.Error(err))
+			}
+			zlog.Info("updated profile",
+				zap.String("login", l),
+				zap.Int64("watchers", watchers),
+				zap.Int64("stargazers", stargazers),
+				zap.Int64("forks", forks),
+				zap.Int("keywords", len(keywords)))
+
+			return schema.Profile{
+				Login:      l,
+				Watchers:   watchers,
+				Stargazers: stargazers,
+				Forks:      forks,
+				Keywords:   keywords,
+			}
+		}
+
+		toStream := func(ctx context.Context, args ...string) <-chan string {
+			c := make(chan string)
+			go func() {
+				defer close(c)
+				for _, i := range args {
+					select {
+					case <-ctx.Done():
+						return
+					case c <- i:
+					}
+				}
+			}()
+			return c
+		}
+
+		fanIn := func(ctx context.Context, maxWorkers int, in <-chan string) <-chan schema.Profile {
+			c := make(chan schema.Profile)
+
+			var wg sync.WaitGroup
+			wg.Add(maxWorkers)
+
+			multiplex := func(worker int, in <-chan string) {
+				defer wg.Done()
+				for i := range in {
+					select {
+					case <-ctx.Done():
+						return
+					case c <- buildProfile(i):
+					}
+				}
+			}
+
+			for i := 0; i < maxWorkers; i++ {
+				go multiplex(i, in)
+			}
+
+			go func() {
+				defer close(c)
+				wg.Wait()
+			}()
+			return c
+		}
+
+		ctx := context.Background()
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		var profiles []schema.Profile
+		for p := range fanIn(ctx, maxWorkers, toStream(ctx, logins...)) {
+			profiles = append(profiles, p)
+		}
+
+		if err = w.psvc.BulkUpsert(profiles); err != nil {
+			zlog.Warn("error upserting", zap.Error(err))
+		}
+		zlog.Info("upserted new profile", zap.Int("count", len(profiles)))
+	}()
+	// Run this in the background
+
 	return c
 }

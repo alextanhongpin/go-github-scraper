@@ -26,3 +26,7 @@ type GetUserCountResponse struct {
 type GetUserResponse struct {
 	Data *User `json:"data"`
 }
+
+type Logins struct {
+	Items []string `bson:"items,omitempty"`
+}

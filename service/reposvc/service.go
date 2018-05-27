@@ -23,7 +23,8 @@ type Service interface {
 	WatchersFor(login string) (int64, error)
 	StargazersFor(login string) (int64, error)
 	ForksFor(login string) (int64, error)
-	WordCount(login string, limit int) ([]WordCount, error)
+	KeywordsFor(login string, limit int) ([]schema.Keyword, error)
+	DistinctLogin() ([]string, error)
 }
 
 // New returns a new service with store

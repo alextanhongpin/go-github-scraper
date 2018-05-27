@@ -846,3 +846,11 @@ func (e Enum) String() string {
 }
 
 ```
+
+## Profiling
+
+```bash
+$ go tool pprof -alloc_space -svg http://localhost:8080/debug/pprof/heap > heap.svg
+
+$ go tool pprof -png http://localhost:8080/debug/pprof/heap > out.png
+```

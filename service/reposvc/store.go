@@ -32,7 +32,8 @@ type (
 		WatchersFor(login string) (int64, error)
 		StargazersFor(login string) (int64, error)
 		ForksFor(login string) (int64, error)
-		WordCount(login string, limit int) ([]WordCount, error)
+		KeywordsFor(login string, limit int) ([]schema.Keyword, error)
+		DistinctLogin() ([]string, error)
 	}
 
 	// store is a struct that holds store configuration
@@ -418,6 +419,9 @@ func (s *store) WatchersFor(login string) (int64, error) {
 	}
 	var watchers Watchers
 	if err := c.Pipe(pipeline).One(&watchers); err != nil {
+		if err == mgo.ErrNotFound {
+			return 0, nil
+		}
 		return 0, err
 	}
 	return watchers.Count, nil
@@ -450,6 +454,9 @@ func (s *store) StargazersFor(login string) (int64, error) {
 	}
 	var stargazers Stargazers
 	if err := c.Pipe(pipeline).One(&stargazers); err != nil {
+		if err == mgo.ErrNotFound {
+			return 0, nil
+		}
 		return 0, err
 	}
 	return stargazers.Count, nil
@@ -482,12 +489,15 @@ func (s *store) ForksFor(login string) (int64, error) {
 	}
 	var forks Forks
 	if err := c.Pipe(pipeline).One(&forks); err != nil {
+		if err == mgo.ErrNotFound {
+			return 0, nil
+		}
 		return 0, err
 	}
 	return forks.Count, nil
 }
 
-func (s *store) WordCount(login string, limit int) ([]WordCount, error) {
+func (s *store) KeywordsFor(login string, limit int) ([]schema.Keyword, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
@@ -518,15 +528,37 @@ func (s *store) WordCount(login string, limit int) ([]WordCount, error) {
 		}`,
 	}
 
-	var res []WordCount
+	var res []schema.Keyword
 	if _, err := c.Find(bson.M{
 		"login": login,
 	}).MapReduce(job, &res); err != nil {
 		return nil, err
 	}
 
+	if len(res) == 0 {
+		return res, nil
+	}
+
 	sort.SliceStable(res, func(i, j int) bool {
 		return res[i].Value > res[j].Value
 	})
-	return res[:20], nil
+	return res[:min(len(res), 20)], nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// DistinctLogin returns a distinct login, so that we don't need to query the repository if the user does not exists
+func (s *store) DistinctLogin() ([]string, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var res []string
+	if err := c.Find(nil).Distinct("login", &res); err != nil {
+		return nil, err
+	}
+	return res, nil
 }

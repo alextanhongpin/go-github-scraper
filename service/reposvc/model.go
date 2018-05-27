@@ -106,6 +106,10 @@ func (m *model) ForksFor(login string) (int64, error) {
 	return m.store.ForksFor(login)
 }
 
-func (m *model) WordCount(login string, limit int) ([]WordCount, error) {
-	return m.store.WordCount(login, limit)
+func (m *model) KeywordsFor(login string, limit int) ([]schema.Keyword, error) {
+	return m.store.KeywordsFor(login, limit)
+}
+
+func (m *model) DistinctLogin() ([]string, error) {
+	return m.store.DistinctLogin()
 }

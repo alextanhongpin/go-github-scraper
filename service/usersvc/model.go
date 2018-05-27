@@ -68,3 +68,7 @@ func (m *model) UpdateOne(login string) error {
 func (m *model) FindOne(login string) (*User, error) {
 	return m.store.FindOne(login)
 }
+
+func (m *model) PickLogin() ([]string, error) {
+	return m.store.PickLogin()
+}

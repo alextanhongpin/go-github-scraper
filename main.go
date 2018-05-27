@@ -4,11 +4,15 @@ import (
 	"log"
 	"net/http"
 	"net/http/pprof"
+	"os"
+	"runtime"
+	rpprof "runtime/pprof"
 
 	"github.com/alextanhongpin/go-github-scraper/api/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/database"
 	"github.com/alextanhongpin/go-github-scraper/internal/util"
 	"github.com/alextanhongpin/go-github-scraper/service/analyticsvc"
+	"github.com/alextanhongpin/go-github-scraper/service/profilesvc"
 	"github.com/alextanhongpin/go-github-scraper/service/reposvc"
 	"github.com/alextanhongpin/go-github-scraper/service/usersvc"
 	"github.com/alextanhongpin/go-github-scraper/worker"
@@ -33,12 +37,25 @@ func init() {
 	viper.SetDefault("github_token", "")                                   // The Github's access token used to make call to the GraphQL Endpoint
 	viper.SetDefault("github_uri", "https://api.github.com/graphql")       // The Github's GraphQL Endpoint
 	viper.SetDefault("port", ":8080")                                      // The TCP port of the application
+	viper.SetDefault("cpuprofile", "cpu.prof")                             // Write cpuprofile to file, e.g. cpu.prof
+	viper.SetDefault("memprofile", "mem.prof")                             // Write memoryprofile to file, e.g. mem.prof
 	if viper.GetString("github_token") == "" {
 		panic("github_token environment variable is missing")
 	}
 }
 
 func main() {
+	if viper.GetString("cpuprofile") != "" {
+		f, err := os.Create(viper.GetString("cpuprofile"))
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := rpprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer rpprof.StopCPUProfile()
+	}
+
 	// Setup Logger
 	logger, err := zap.NewProduction()
 	if err != nil {
@@ -54,12 +71,13 @@ func main() {
 	asvc := analyticsvc.New(db)
 	rsvc := reposvc.New(db)
 	usvc := usersvc.New(db)
+	psvc := profilesvc.New(db)
 	gsvc := github.New(
 		viper.GetString("github_token"),
 		viper.GetString("github_uri"))
 
 	// Setup workers
-	w := worker.New(gsvc, asvc, usvc, rsvc, logger)
+	w := worker.New(gsvc, asvc, psvc, rsvc, usvc, logger)
 
 	logger.Info("crontab_user", zap.Bool("is_enabled", viper.GetBool("crontab_user_enable")))
 	if viper.GetBool("crontab_user_enable") {
@@ -79,6 +97,9 @@ func main() {
 		c3.Start()
 	}
 
+	_ = w.NewProfileBuilder(viper.GetString("crontab_analytic"))
+	// c4.Start()
+
 	// Setup router
 	r := httprouter.New()
 
@@ -97,6 +118,18 @@ func main() {
 	usersvc.MakeEndpoints(usvc, r)
 	analyticsvc.MakeEndpoints(asvc, r)
 	reposvc.MakeEndpoints(rsvc, r)
+
+	if viper.GetString("memprofile") != "" {
+		f, err := os.Create(viper.GetString("memprofile"))
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		runtime.GC() // get up-to-date statistics
+		if err := rpprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
+		f.Close()
+	}
 
 	// Setup server
 	server := util.NewHTTPServer(viper.GetString("port"), r)

@@ -15,6 +15,7 @@ type Service interface {
 	FindLastCreated() (string, bool)
 	FindLastFetched(limit int) ([]User, error)
 	MostRecent(limit int) ([]User, error)
+	PickLogin() ([]string, error)
 	UpdateOne(login string) error
 }
 
