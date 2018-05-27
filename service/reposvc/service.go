@@ -20,6 +20,9 @@ type Service interface {
 	MostStars(limit int) ([]schema.Repo, error)
 	RepoCountByUser(limit int) ([]schema.UserCount, error)
 	ReposByLanguage(language string, limit int) ([]schema.UserCount, error)
+	WatchersFor(login string) (int64, error)
+	StargazersFor(login string) (int64, error)
+	ForksFor(login string) (int64, error)
 }
 
 // New returns a new service with store

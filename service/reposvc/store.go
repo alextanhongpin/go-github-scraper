@@ -25,6 +25,9 @@ type (
 		AggregateMostRecentReposByLanguage(language string, limit int) ([]schema.Repo, error)
 		AggregateReposByLanguage(language string, limit int) ([]schema.UserCount, error)
 		Drop() error
+		WatchersFor(login string) (int64, error)
+		StargazersFor(login string) (int64, error)
+		ForksFor(login string) (int64, error)
 	}
 
 	// store is a struct that holds store configuration
@@ -102,9 +105,6 @@ func (s *store) Upsert(repo github.Repo) error {
 		bson.M{"nameWithOwner": repo.NameWithOwner},
 		bson.M{
 			"$set": repo.BSON(),
-			// "$setOnInsert": bson.M{
-			// 	"fetchedAt": util.NewUTCDate(),
-			// },
 		},
 	); err != nil {
 		return err
@@ -122,9 +122,6 @@ func (s *store) BulkUpsert(repos []github.Repo) error {
 			bson.M{"nameWithOwner": repo.NameWithOwner},
 			bson.M{
 				"$set": repo.BSON(),
-				// "$setOnInsert": bson.M{
-				// 	"fetchedAt": util.NewUTCDate(),
-				// },
 			},
 		)
 	}
@@ -388,4 +385,99 @@ func (s *store) Drop() error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 	return c.DropCollection()
+}
+
+func (s *store) WatchersFor(login string) (int64, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	pipeline := []bson.M{
+		bson.M{
+			"$match": bson.M{
+				"isFork": false,
+				"login":  login,
+			},
+		},
+		bson.M{
+			"$group": bson.M{
+				"_id":   "$login",
+				"count": bson.M{"$sum": "$stargazers"},
+			},
+		},
+		bson.M{
+			"$project": bson.M{
+				"login": "$_id.login",
+				"count": 1,
+			},
+		},
+	}
+	var watchers Watchers
+	if err := c.Pipe(pipeline).One(&watchers); err != nil {
+		return 0, err
+	}
+	return watchers.Count, nil
+}
+
+func (s *store) StargazersFor(login string) (int64, error) {
+
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	pipeline := []bson.M{
+		bson.M{
+			"$match": bson.M{
+				"isFork": false,
+				"login":  login,
+			},
+		},
+		bson.M{
+			"$group": bson.M{
+				"_id":   "$login",
+				"count": bson.M{"$sum": "$watchers"},
+			},
+		},
+		bson.M{
+			"$project": bson.M{
+				"login": "$_id.login",
+				"count": 1,
+			},
+		},
+	}
+	var stargazers Stargazers
+	if err := c.Pipe(pipeline).One(&stargazers); err != nil {
+		return 0, err
+	}
+	return stargazers.Count, nil
+}
+
+func (s *store) ForksFor(login string) (int64, error) {
+
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	pipeline := []bson.M{
+		bson.M{
+			"$match": bson.M{
+				"isFork": false,
+				"login":  login,
+			},
+		},
+		bson.M{
+			"$group": bson.M{
+				"_id":   "$login",
+				"count": bson.M{"$sum": "$forks"},
+			},
+		},
+		bson.M{
+			"$project": bson.M{
+				"login": "$_id.login",
+				"count": 1,
+			},
+		},
+	}
+	var forks Forks
+	if err := c.Pipe(pipeline).One(&forks); err != nil {
+		return 0, err
+	}
+	return forks.Count, nil
 }

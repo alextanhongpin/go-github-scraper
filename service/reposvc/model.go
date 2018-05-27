@@ -93,3 +93,15 @@ func (m *model) RepoCountByUser(limit int) ([]schema.UserCount, error) {
 func (m *model) ReposByLanguage(language string, limit int) ([]schema.UserCount, error) {
 	return m.store.AggregateReposByLanguage(language, limit)
 }
+
+func (m *model) WatchersFor(login string) (int64, error) {
+	return m.store.WatchersFor(login)
+}
+
+func (m *model) StargazersFor(login string) (int64, error) {
+	return m.store.StargazersFor(login)
+}
+
+func (m *model) ForksFor(login string) (int64, error) {
+	return m.store.ForksFor(login)
+}
