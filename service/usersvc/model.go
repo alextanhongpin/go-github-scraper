@@ -4,6 +4,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/spf13/viper"
+
 	"github.com/alextanhongpin/go-github-scraper/api/github"
 )
 
@@ -37,14 +39,16 @@ func (m *model) Drop() error {
 }
 
 func (m *model) FindLastCreated() (string, bool) {
+	githubCreatedAt := viper.GetString("github_created_at")
+
 	user, err := m.store.FindLastCreated()
 	if err != nil || user == nil {
 		// Github's creation date
-		return "2008-04-01", false
+		return githubCreatedAt, false
 	}
 	t, err := time.Parse(time.RFC3339, user.CreatedAt)
 	if err != nil {
-		return "2008-04-01", false
+		return githubCreatedAt, false
 	}
 	return t.Format("2006-01-02"), true
 }

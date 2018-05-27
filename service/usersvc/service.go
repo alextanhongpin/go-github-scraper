@@ -7,13 +7,13 @@ import (
 
 // Service represents the model of the user
 type Service interface {
-	Init() error
-	MostRecent(limit int) ([]User, error)
 	BulkUpsert(users []github.User) error
+	Count() (int, error)
 	Drop() error
+	Init() error
 	FindLastCreated() (string, bool)
 	FindLastFetched(limit int) ([]User, error)
-	Count() (int, error)
+	MostRecent(limit int) ([]User, error)
 	UpdateOne(login string) error
 }
 

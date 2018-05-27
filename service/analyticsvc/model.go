@@ -1,6 +1,8 @@
 package analyticsvc
 
-import "github.com/alextanhongpin/go-github-scraper/internal/schema"
+import (
+	"github.com/alextanhongpin/go-github-scraper/internal/schema"
+)
 
 // Model represents the interface for the analytic business logic
 type (

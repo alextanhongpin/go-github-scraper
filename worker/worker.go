@@ -6,12 +6,12 @@ import (
 	"github.com/alextanhongpin/go-github-scraper/api/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/schema"
 	"github.com/alextanhongpin/go-github-scraper/internal/util"
-	"github.com/alextanhongpin/go-github-scraper/service/analytic"
-	"github.com/alextanhongpin/go-github-scraper/service/repo"
-	"github.com/alextanhongpin/go-github-scraper/service/user"
+	"github.com/alextanhongpin/go-github-scraper/service/analyticsvc"
+	"github.com/alextanhongpin/go-github-scraper/service/reposvc"
+	"github.com/alextanhongpin/go-github-scraper/service/usersvc"
 
 	"github.com/robfig/cron"
-	"github.com/satori/go.uuid"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -40,40 +40,37 @@ func New(gsvc github.API, asvc analyticsvc.Service, usvc usersvc.Service, rsvc r
 		usvc: usvc,
 		rsvc: rsvc,
 		zlog: zlog,
-		// config: config
 	}
 }
 
-func (w *worker) NewFetchUsers(tab string) *cron.Cron {
-	requestID, err := uuid.NewV4()
-	zlog := w.zlog
+// makeEndDate sets the end date n months away to max present day
+func makeEndDate(start string, months int) string {
+	t1, err := time.Parse("2006-01-02", start)
 	if err != nil {
-		zlog.Warn("error generating uuid", zap.Error(err))
-	} else {
-		zlog = w.zlog.WithOptions(zap.Fields(zap.String("requestId", requestID.String())))
+		return time.Now().Format("2006-01-02")
 	}
+	t2 := t1.Add(time.Duration(months) * 30 * 24 * time.Hour)
+	if t2.Unix() > time.Now().Unix() {
+		return time.Now().Format("2006-01-02")
+	}
+	return t2.Format("2006-01-02")
+}
+
+func (w *worker) NewFetchUsers(tab string) *cron.Cron {
+	zlog := util.LoggerWithRequestID(w.zlog)
 
 	c := cron.New()
 	c.AddFunc(tab, func() {
+		zlog.Info("start cron", zap.String("type", "fetch_users"))
 		start, ok := w.usvc.FindLastCreated()
-		t, err := time.Parse("2006-01-02", start)
-		if err != nil {
-			zlog.Warn("error parsing time", zap.Error(err))
-		}
-		t2 := t.Add(6 * 30 * 24 * time.Hour)
-		var end string
-		if t2.Unix() > time.Now().Unix() {
-			end = time.Now().Format("2006-01-02")
-		} else {
-			end = t2.Format("2006-01-02")
-		}
+		months := 6
+		end := makeEndDate(start, months)
 		zlog.Info("fetch users since",
 			zap.String("start", start),
 			zap.String("end", end),
 			zap.Bool("default", ok))
 
-		// TODO: Make Malaysia a config
-		users, err := w.gsvc.FetchUsersCursor("Malaysia", start, end, 30)
+		users, err := w.gsvc.FetchUsersCursor(viper.GetString("github_location"), start, end, 30)
 		if err != nil {
 			zlog.Warn("error fetching users", zap.Error(err))
 		}
@@ -91,18 +88,14 @@ func (w *worker) NewFetchUsers(tab string) *cron.Cron {
 }
 
 func (w *worker) NewFetchRepos(tab string) *cron.Cron {
-	requestID, err := uuid.NewV4()
-	zlog := w.zlog
-	if err != nil {
-		zlog.Warn("error generating uuid", zap.Error(err))
-	} else {
-		zlog = w.zlog.WithOptions(zap.Fields(zap.String("requestId", requestID.String())))
-	}
+	zlog := util.LoggerWithRequestID(w.zlog)
+	userPerPage := 10
+	repoPerPage := 30
 
 	c := cron.New()
 	c.AddFunc(tab, func() {
-		// TODO: Config
-		users, err := w.usvc.FindLastFetched(10)
+		zlog.Info("start cron", zap.String("type", "fetch_repos"))
+		users, err := w.usvc.FindLastFetched(userPerPage)
 		if err != nil {
 			zlog.Error("unable to find last fetched users",
 				zap.Error(err))
@@ -122,8 +115,7 @@ func (w *worker) NewFetchRepos(tab string) *cron.Cron {
 				zap.String("for", login),
 				zap.Bool("default", ok))
 
-			// TODO: Make Malaysia a config
-			repos, err := w.gsvc.FetchReposCursor(login, start, end, 30)
+			repos, err := w.gsvc.FetchReposCursor(login, start, end, repoPerPage)
 			if err != nil {
 				zlog.Warn("error fetching repos", zap.Error(err))
 			}
@@ -147,18 +139,13 @@ func (w *worker) NewFetchRepos(tab string) *cron.Cron {
 }
 
 func (w *worker) NewAnalyticBuilder(tab string) *cron.Cron {
-	requestID, err := uuid.NewV4()
-	zlog := w.zlog
-	if err != nil {
-		zlog.Warn("error generating uuid", zap.Error(err))
-	} else {
-		zlog = w.zlog.WithOptions(zap.Fields(zap.String("requestId", requestID.String())))
-	}
-
+	zlog := util.LoggerWithRequestID(w.zlog)
 	zlog.Info("NewAnalyticBuilder", zap.Bool("initialized", true))
 
 	c := cron.New()
 	c.AddFunc(tab, func() {
+		zlog.Info("start cron", zap.String("type", "build_analytic"))
+
 		// Start: user_count
 		count, err := w.usvc.Count()
 		if err != nil {

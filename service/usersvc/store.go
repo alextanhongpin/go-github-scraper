@@ -96,9 +96,6 @@ func (s *store) Upsert(user github.User) error {
 		bson.M{"login": user.Login},
 		bson.M{
 			"$set": user.BSON(),
-			// "$setOnInsert": bson.M{
-			// 	"fetchedAt": util.NewUTCDate(),
-			// },
 		},
 	); err != nil {
 		return err
@@ -116,9 +113,6 @@ func (s *store) BulkUpsert(users []github.User) error {
 			bson.M{"login": user.Login},
 			bson.M{
 				"$set": user.BSON(),
-				// "$setOnInsert": bson.M{
-				// 	"fetchedAt": util.NewUTCDate(),
-				// },
 			},
 		)
 	}
