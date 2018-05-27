@@ -4,13 +4,16 @@ import (
 	"flag"
 	"log"
 
+	"github.com/alextanhongpin/go-github-scraper/api/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/database"
 	"github.com/alextanhongpin/go-github-scraper/internal/util"
 	"github.com/alextanhongpin/go-github-scraper/service/analytic"
 	"github.com/alextanhongpin/go-github-scraper/service/repo"
 	"github.com/alextanhongpin/go-github-scraper/service/user"
+	"github.com/alextanhongpin/go-github-scraper/worker"
 
 	"github.com/julienschmidt/httprouter"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -21,70 +24,81 @@ func main() {
 	dbHost := flag.String("db_host", "mongodb://myuser:mypass@localhost:27017", "The hostname of the database")
 	flag.Parse()
 
-	// _ = port
-	_ = githubToken
-	_ = githubURI
+	// Setup Logger
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logger.Sync()
 
+	// Setup Database
 	db := database.New(*dbHost, *dbName)
 	defer db.Close()
 
 	// Setup services
-	asvc := analytic.NewService(db)
-	rsvc := repo.NewService(db)
-	usvc := user.NewService(db)
+	asvc := analyticsvc.New(db)
+	rsvc := reposvc.New(db)
+	usvc := usersvc.New(db)
+	gsvc := github.New(*githubToken, *githubURI)
 
-	if err := rsvc.Init(); err != nil {
-		log.Println("error setting repo service", err)
-	}
-	if err := usvc.Init(); err != nil {
-		log.Println("error setting user service", err)
-	}
-
-	// if count, err := rsvc.Count(); err != nil {
-	// 	log.Fatal(err)
-	// } else {
-	// 	log.Printf("repos count: %#v", count)
+	// users, err := usvc.FindLastFetched(10)
+	// if err != nil {
+	// 	log.Println("fail to fetch users", err)
 	// }
+	// log.Printf("%#v\n", users)
 
+	// if err := usvc.Drop(); err != nil {
+	// 	log.Fatal("fail to drop users", err)
+	// }
+	// if err := rsvc.Drop(); err != nil {
+	// 	log.Fatal("fail to drop repos", err)
+	// }
+	if count, err := usvc.Count(); err != nil {
+		log.Fatal(err)
+	} else {
+		log.Printf("user count: %#v", count)
+	}
+
+	if count, err := rsvc.ReposByLanguage("JavaScript", 20); err != nil {
+		log.Fatal(err)
+	} else {
+		log.Printf("repos count: %#v", count)
+	}
+
+	// MostRecent(limit int) ([]Repo, error)
+	// MostStars(limit int) ([]Repo, error)
+	// Count() (int, error)
+	// MostPopularLanguage(limit int) ([]LanguageCount, error)
+	// RepoCountByUser(limit int) ([]UserCount, error)
+	// LanguageCountByUser(login string, limit int) ([]LanguageCount, error)
+	// MostRecentReposByLanguage(language string, limit int) ([]Repo, error)
+	// ReposByLanguage(language string, limit int) ([]Repo, error)
+
+	// if repos, err := rsvc.MostRecent(20); err != nil {
+	// 	log.Println("error", err)
+	// } else {
+	// 	log.Printf("repos: %#v", repos)
+	// }
 	// if count, err := usvc.MostRecent(20); err != nil {
 	// 	log.Println("error", err)
 	// } else {
 	// 	log.Printf("user count: %#v", count)
 	// }
 
-	// if err := usvc.Drop(); err != nil {
-	// 	log.Println("droperror", err)
-	// }
-	// Setup external api calls
-	// gsvc := github.NewAPI(*githubToken, *githubURI)
-	// if users, err := gsvc.FetchUsersCursor("Malaysia", "2008-04-01", "2009-01-01", 30); err != nil {
-	// 	log.Println("FetchUsersCursorError", err)
-	// } else {
-	// 	log.Printf("got users %#v\n", users)
-	// 	if err := usvc.BulkUpsert(users); err != nil {
-	// 		log.Println("BulkUpsert users", err)
-	// 	}
-	// }
-	// repos, err := gsvc.FetchReposCursor("alextanhongpin", "2008-01-01", "2018-06-01", 30)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// if err := rsvc.BulkUpsert(repos); err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// if count, err := rsvc.MostRecent(5); err != nil {
-	// 	log.Fatal(err)
-	// } else {
-	// 	log.Printf("most recent repos: %#v", count)
-	// }
-
-	lastCreated, ok := rsvc.FindLastCreatedByUser("alextanhongpin")
-	log.Println(lastCreated, ok)
+	// Setup workers
+	w := worker.New(gsvc, asvc, usvc, rsvc, logger)
+	// c1 := w.NewFetchUsers("*/20 * * * * *")
+	// c1.Start()
+	// c2 := w.NewFetchRepos("*/20 * * * * *")
+	// c2.Start()
+	c3 := w.NewAnalyticBuilder("*/20 * * * * *")
+	c3.Start()
 
 	// Setup endpoints
 	r := httprouter.New()
-	analytic.NewEndpoints(asvc, r)
+	usersvc.MakeEndpoints(usvc, r)
+	analyticsvc.MakeEndpoints(asvc, r)
+	reposvc.MakeEndpoints(rsvc, r)
 
 	server := util.NewHTTPServer(*port, r)
 	log.Printf("listening to port *%s. press ctrl + c to cancel.\n", *port)

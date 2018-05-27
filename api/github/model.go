@@ -5,19 +5,12 @@ import (
 )
 
 // Model represents the api interface for the Github's GraphQL
-type (
-	Model interface {
-		FetchUsersCursor(location, start, end string, limit int) ([]User, error)
-		FetchReposCursor(login, start, end string, limit int) ([]Repo, error)
-	}
-
-	model struct {
-		store Store
-	}
-)
+type model struct {
+	store Store
+}
 
 // NewModel returns a new model
-func NewModel(store Store) Model {
+func NewModel(store Store) API {
 	return &model{
 		store: store,
 	}

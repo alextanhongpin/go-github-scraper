@@ -1,4 +1,4 @@
-package analytic
+package analyticsvc
 
 import (
 	"net/http"
@@ -11,24 +11,37 @@ import (
 // Endpoints represents the services exposed as http routes
 type (
 	Endpoints interface {
-		GetUserCount() httprouter.Handle
+		GetAnalytics() httprouter.Handle
 	}
 
 	endpoints struct {
-		model Model
+		svc Service
 	}
 )
 
-// NewEndpoints returns a new route for the analytic service
-func NewEndpoints(model Model, r *httprouter.Router) {
-	e := &endpoints{model: model}
+// MakeEndpoints creates a new set of endpoints based on the service provided and router
+func MakeEndpoints(svc Service, r *httprouter.Router) {
+	e := &endpoints{svc: svc}
 
-	r.GET("/analytics", e.GetUserCount())
+	r.GET("/analytics", e.GetAnalytics())
 }
 
-func (e *endpoints) GetUserCount() httprouter.Handle {
+func (e *endpoints) GetAnalytics() httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		count, err := e.model.GetUserCount()
-		util.ResponseJSON(w, count, err)
+		switch r.URL.Query().Get("type") {
+		case EnumUserCount:
+			count, err := e.svc.GetUserCount()
+			util.ResponseJSON(w, count, err)
+		case EnumRepoCount:
+			count, err := e.svc.GetRepoCount()
+			util.ResponseJSON(w, count, err)
+		case EnumReposMostRecent:
+			count, err := e.svc.GetReposMostRecent()
+			util.ResponseJSON(w, count, err)
+		default:
+			http.Error(w, "query type is missing", http.StatusBadRequest)
+			return
+		}
+
 	}
 }

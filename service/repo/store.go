@@ -1,9 +1,9 @@
-package repo
+package reposvc
 
 import (
 	"github.com/alextanhongpin/go-github-scraper/api/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/database"
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
+	"github.com/alextanhongpin/go-github-scraper/internal/schema"
 
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -13,17 +13,18 @@ import (
 type (
 	Store interface {
 		Init() error
-		FindOne(nameWithOwner string) (*Repo, error)
-		FindAll(limit int, sort []string) ([]Repo, error)
-		FindLastCreatedByUser(login string) (*Repo, error)
+		FindOne(nameWithOwner string) (*schema.Repo, error)
+		FindAll(limit int, sort []string) ([]schema.Repo, error)
+		FindLastCreatedByUser(login string) (*schema.Repo, error)
 		Upsert(github.Repo) error
 		BulkUpsert(repos []github.Repo) error
 		Count() (int, error)
 		AggregateLanguages(limit int) ([]LanguageCount, error)
 		AggregateReposByUser(limit int) ([]UserCount, error)
 		AggregateLanguageByUser(login string, limit int) ([]LanguageCount, error)
-		AggregateMostRecentReposByLanguage(language string, limit int) ([]Repo, error)
-		AggregateReposByLanguage(language string, limit int) ([]Repo, error)
+		AggregateMostRecentReposByLanguage(language string, limit int) ([]schema.Repo, error)
+		AggregateReposByLanguage(language string, limit int) ([]UserCount, error)
+		Drop() error
 	}
 
 	// store is a struct that holds store configuration
@@ -51,11 +52,11 @@ func (s *store) Init() error {
 	})
 }
 
-func (s *store) FindOne(nameWithOwner string) (*Repo, error) {
+func (s *store) FindOne(nameWithOwner string) (*schema.Repo, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
-	var repo Repo
+	var repo schema.Repo
 	if err := c.Find(bson.M{"nameWithOwner": nameWithOwner}).
 		One(&repo); err != nil {
 		return nil, err
@@ -64,11 +65,11 @@ func (s *store) FindOne(nameWithOwner string) (*Repo, error) {
 	return &repo, nil
 }
 
-func (s *store) FindAll(limit int, sort []string) ([]Repo, error) {
+func (s *store) FindAll(limit int, sort []string) ([]schema.Repo, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
-	var repos []Repo
+	var repos []schema.Repo
 	if err := c.Find(bson.M{}).
 		Sort(sort...).
 		Limit(limit).
@@ -78,11 +79,11 @@ func (s *store) FindAll(limit int, sort []string) ([]Repo, error) {
 	return repos, nil
 }
 
-func (s *store) FindLastCreatedByUser(login string) (*Repo, error) {
+func (s *store) FindLastCreatedByUser(login string) (*schema.Repo, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
-	var repo Repo
+	var repo schema.Repo
 	if err := c.Find(bson.M{
 		"login": login,
 	}).
@@ -101,9 +102,9 @@ func (s *store) Upsert(repo github.Repo) error {
 		bson.M{"nameWithOwner": repo.NameWithOwner},
 		bson.M{
 			"$set": repo.BSON(),
-			"$setOnInsert": bson.M{
-				"fetchedAt": util.NewUTCDate(),
-			},
+			// "$setOnInsert": bson.M{
+			// 	"fetchedAt": util.NewUTCDate(),
+			// },
 		},
 	); err != nil {
 		return err
@@ -121,9 +122,9 @@ func (s *store) BulkUpsert(repos []github.Repo) error {
 			bson.M{"nameWithOwner": repo.NameWithOwner},
 			bson.M{
 				"$set": repo.BSON(),
-				"$setOnInsert": bson.M{
-					"fetchedAt": util.NewUTCDate(),
-				},
+				// "$setOnInsert": bson.M{
+				// 	"fetchedAt": util.NewUTCDate(),
+				// },
 			},
 		)
 	}
@@ -200,7 +201,8 @@ func (s *store) AggregateReposByUser(limit int) ([]UserCount, error) {
 				"_id": bson.M{
 					"login": "$login",
 				},
-				"count": bson.M{"$sum": 1},
+				"count":     bson.M{"$sum": 1},
+				"avatarUrl": bson.M{"$first": "$avatarUrl"},
 			},
 		},
 		bson.M{
@@ -213,8 +215,9 @@ func (s *store) AggregateReposByUser(limit int) ([]UserCount, error) {
 		},
 		bson.M{
 			"$project": bson.M{
-				"count": 1,
-				"name":  "$_id.login",
+				"count":     1,
+				"avatarUrl": 1,
+				"name":      "$_id.login",
 			},
 		},
 	}
@@ -273,7 +276,7 @@ func (s *store) AggregateLanguageByUser(login string, limit int) ([]LanguageCoun
 }
 
 // AggregateMostRecentReposByLanguage returns the most recent repos by language
-func (s *store) AggregateMostRecentReposByLanguage(language string, limit int) ([]Repo, error) {
+func (s *store) AggregateMostRecentReposByLanguage(language string, limit int) ([]schema.Repo, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 	pipeline := []bson.M{
@@ -317,7 +320,7 @@ func (s *store) AggregateMostRecentReposByLanguage(language string, limit int) (
 			"$limit": limit,
 		},
 	}
-	var repos []Repo
+	var repos []schema.Repo
 	if err := c.Pipe(pipeline).All(&repos); err != nil {
 		return nil, err
 	}
@@ -325,7 +328,7 @@ func (s *store) AggregateMostRecentReposByLanguage(language string, limit int) (
 }
 
 // AggregateReposByLanguage returns the users by languages
-func (s *store) AggregateReposByLanguage(language string, limit int) ([]Repo, error) {
+func (s *store) AggregateReposByLanguage(language string, limit int) ([]UserCount, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 	pipeline := []bson.M{
@@ -339,20 +342,7 @@ func (s *store) AggregateReposByLanguage(language string, limit int) ([]Repo, er
 				"isLanguage": bson.M{
 					"$in": []string{language, "$languages"},
 				},
-				"name":          1,
-				"createdAt":     1,
-				"updatedAt":     1,
-				"description":   1,
-				"languages":     1,
-				"homepageUrl":   1,
-				"forkCount":     1,
-				"isFork":        1,
-				"nameWithOwner": 1,
-				"login":         1,
-				"avatarUrl":     1,
-				"stargazers":    1,
-				"watchers":      1,
-				"url":           1,
+				"login": 1,
 			},
 		},
 		bson.M{
@@ -365,7 +355,8 @@ func (s *store) AggregateReposByLanguage(language string, limit int) ([]Repo, er
 				"_id": bson.M{
 					"login": "$login",
 				},
-				"count": bson.M{"$sum": 1},
+				"count":     bson.M{"$sum": 1},
+				"avatarUrl": bson.M{"$first": "$avatarUrl"},
 			},
 		},
 		bson.M{
@@ -376,11 +367,24 @@ func (s *store) AggregateReposByLanguage(language string, limit int) ([]Repo, er
 		bson.M{
 			"$limit": limit,
 		},
+		bson.M{
+			"$project": bson.M{
+				"count":     1,
+				"avatarUrl": 1,
+				"name":      "$_id.login",
+			},
+		},
 	}
-	var repos []Repo
+	var repos []UserCount
 	if err := c.Pipe(pipeline).All(&repos); err != nil {
 		return nil, err
 	}
 
 	return repos, nil
+}
+
+func (s *store) Drop() error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	return c.DropCollection()
 }

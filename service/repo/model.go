@@ -1,82 +1,50 @@
-package repo
+package reposvc
 
 import (
 	"log"
 	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/api/github"
+	"github.com/alextanhongpin/go-github-scraper/internal/schema"
 )
 
 // Model represents the interface for the repo business logic
-type (
-	Model interface {
-		Init() error
-		MostRecent(limit int) ([]Repo, error)
-		MostStars(limit int) ([]Repo, error)
-		Count() (int, error)
-		MostPopularLanguage(limit int) ([]LanguageCount, error)
-		RepoCountByUser(limit int) ([]UserCount, error)
-		LanguageCountByUser(login string, limit int) ([]LanguageCount, error)
-		MostRecentReposByLanguage(language string, limit int) ([]Repo, error)
-		ReposByLanguage(language string, limit int) ([]Repo, error)
-		BulkUpsert(repos []github.Repo) error
-		FindLastCreatedByUser(login string) (string, bool)
-	}
-
-	model struct {
-		store Store
-	}
-)
+type model struct {
+	store Store
+}
 
 // NewModel returns a pointer to the Model
-func NewModel(store Store) Model {
-	return &model{
-		store: store,
+func NewModel(store Store) Service {
+	m := model{store: store}
+	if err := m.Init(); err != nil {
+		log.Fatal(err)
 	}
+	return &m
 }
 
-func (m *model) Init() error {
-	return m.store.Init()
-}
-
-func (m *model) MostRecent(limit int) ([]Repo, error) {
-	return m.store.FindAll(limit, []string{"-updatedAt"})
-}
-
-func (m *model) MostStars(limit int) ([]Repo, error) {
-	return m.store.FindAll(limit, []string{"-stargazers"})
-}
-
-func (m *model) Count() (int, error) {
-	return m.store.Count()
-}
-
-func (m *model) MostPopularLanguage(limit int) ([]LanguageCount, error) {
-	return m.store.AggregateLanguages(limit)
-}
-
-func (m *model) RepoCountByUser(limit int) ([]UserCount, error) {
-	return m.store.AggregateReposByUser(limit)
-}
-
-func (m *model) LanguageCountByUser(login string, limit int) ([]LanguageCount, error) {
-	return m.store.AggregateLanguageByUser(login, limit)
-}
-
-func (m *model) MostRecentReposByLanguage(language string, limit int) ([]Repo, error) {
-	return m.store.AggregateMostRecentReposByLanguage(language, limit)
-}
-
-func (m *model) ReposByLanguage(language string, limit int) ([]Repo, error) {
-	return m.store.AggregateReposByLanguage(language, limit)
-}
-
+// BulkUpsert inserts a list of docs if they do not exists, or updates them if they exist and values differs
 func (m *model) BulkUpsert(repos []github.Repo) error {
 	log.Printf("repo.model.BulkUpsert repoCount:%d\n", len(repos))
 	return m.store.BulkUpsert(repos)
 }
 
-// FindLastCreatedByUser returns the date of the last created repo in the format 2006-01-02
+// Count returns the total count of the repos
+func (m *model) Count() (int, error) {
+	return m.store.Count()
+}
+
+// Drop drops the collection
+func (m *model) Drop() error {
+	return m.store.Drop()
+}
+
+// Perform initialization of the service, such as setting up
+// tables for the storage or indexes
+func (m *model) Init() error {
+	return m.store.Init()
+}
+
+// FindLastCreatedByUser returns the last created datetime in the format YYYY-MM-DD for a particular user
 func (m *model) FindLastCreatedByUser(login string) (string, bool) {
 	log.Printf("repo.model.FindLastCreatedByUser login:%s\n", login)
 	repo, err := m.store.FindLastCreatedByUser(login)
@@ -89,4 +57,39 @@ func (m *model) FindLastCreatedByUser(login string) (string, bool) {
 		return "2008-04-01", false
 	}
 	return t.Format("2006-01-02"), true
+}
+
+// LanguageCountByUser returns the top languages for a particular user
+func (m *model) LanguageCountByUser(login string, limit int) ([]LanguageCount, error) {
+	return m.store.AggregateLanguageByUser(login, limit)
+}
+
+// MostPopularLanguage returns the most frequent language based on repo count in descending order
+func (m *model) MostPopularLanguage(limit int) ([]LanguageCount, error) {
+	return m.store.AggregateLanguages(limit)
+}
+
+// MostRecent returns a limited results of repo that are recently updated
+func (m *model) MostRecent(limit int) ([]schema.Repo, error) {
+	return m.store.FindAll(limit, []string{"-updatedAt"})
+}
+
+// MostRecentReposByLanguage returns the most recent repos that are updated for a given language
+func (m *model) MostRecentReposByLanguage(language string, limit int) ([]schema.Repo, error) {
+	return m.store.AggregateMostRecentReposByLanguage(language, limit)
+}
+
+// MostStars returns a limited results of repos with the most stars
+func (m *model) MostStars(limit int) ([]schema.Repo, error) {
+	return m.store.FindAll(limit, []string{"-stargazers"})
+}
+
+// RepoCountByUser returns the users with most repos sorted in descending order
+func (m *model) RepoCountByUser(limit int) ([]UserCount, error) {
+	return m.store.AggregateReposByUser(limit)
+}
+
+// ReposByLanguage returns the users with the most repo in the particular language
+func (m *model) ReposByLanguage(language string, limit int) ([]UserCount, error) {
+	return m.store.AggregateReposByLanguage(language, limit)
 }

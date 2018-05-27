@@ -1,4 +1,4 @@
-package user
+package usersvc
 
 // User represents the user information in Github
 type User struct {
@@ -17,4 +17,8 @@ type User struct {
 	Gists        int64  `json:"gists,omitempty" bson:"gists,omitempty"`
 	Followers    int64  `json:"followers,omitempty" bson:"followers,omitempty"`
 	Following    int64  `json:"following,omitempty" bson:"following,omitempty"`
+}
+
+type GetUserCountResponse struct {
+	Count int `json:"count"`
 }
