@@ -17,12 +17,14 @@ var errTypeAssertion = errors.New("unable to perform type assertion")
 type (
 	Store interface {
 		Init() error
-		GetUserCount() (*UserCount, error)
+		GetUserCount() (*schema.UserCount, error)
 		PostUserCount(count int) error
 		GetRepoCount() (*RepoCount, error)
 		PostRepoCount(count int) error
 		GetReposMostRecent() (*ReposMostRecent, error)
 		PostReposMostRecent(data []schema.Repo) error
+		GetRepoCountByUser() (*RepoCountByUser, error)
+		PostRepoCountByUser(repos []schema.UserCount) error
 	}
 
 	store struct {
@@ -49,10 +51,10 @@ func (s *store) Init() error {
 	})
 }
 
-func (s *store) GetUserCount() (*UserCount, error) {
+func (s *store) GetUserCount() (*schema.UserCount, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	var res UserCount
+	var res schema.UserCount
 	if err := c.
 		Find(bson.M{"type": EnumUserCount}).
 		One(&res); err != nil {
@@ -145,20 +147,49 @@ func (s *store) PostReposMostRecent(repos []schema.Repo) error {
 	return nil
 }
 
-// func (s *store) GetEnumRepoCountByUser(data) error  {}
-// func (s *store) PostEnumRepoCountByUser(data) error {}
+func (s *store) GetRepoCountByUser() (*RepoCountByUser, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var res RepoCountByUser
+	if err := c.
+		Find(bson.M{"type": EnumRepoCountByUser}).
+		One(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
 
-// func (s *store) GetEnumReposMostStars(data) error  {}
-// func (s *store) PostEnumReposMostStars(data) error {}
+func (s *store) PostRepoCountByUser(users []schema.UserCount) error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	if _, err := c.Upsert(
+		bson.M{"type": EnumRepoCountByUser},
+		bson.M{
+			"$set": bson.M{
+				"users":     users,
+				"updatedAt": util.NewUTCDate(),
+			},
+			"$setOnInsert": bson.M{
+				"createdAt": util.NewUTCDate(),
+			},
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}
 
-// func (s *store) GetEnumMostPopularLanguage(data) error  {}
-// func (s *store) PostEnumMostPopularLanguage(data) error {}
+// func (s *store) GetReposMostStars(data) error  {}
+// func (s *store) PostReposMostStars(data) error {}
 
-// func (s *store) GetEnumLanguageCountByUser(data) error  {}
-// func (s *store) PostEnumLanguageCountByUser(data) error {}
+// func (s *store) GetMostPopularLanguage(data) error  {}
+// func (s *store) PostMostPopularLanguage(data) error {}
 
-// func (s *store) GetEnumMostRecentReposByLanguage(data) error  {}
-// func (s *store) PostEnumMostRecentReposByLanguage(data) error {}
+// func (s *store) GetLanguageCountByUser(data) error  {}
+// func (s *store) PostLanguageCountByUser(data) error {}
 
-// func (s *store) GetEnumReposByLanguage(data) error  {}
-// func (s *store) PostEnumReposByLanguage(data) error {}
+// func (s *store) GetMostRecentReposByLanguage(data) error  {}
+// func (s *store) PostMostRecentReposByLanguage(data) error {}
+
+// func (s *store) GetReposByLanguage(data) error  {}
+// func (s *store) PostReposByLanguage(data) error {}

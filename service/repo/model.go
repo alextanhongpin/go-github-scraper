@@ -60,12 +60,12 @@ func (m *model) FindLastCreatedByUser(login string) (string, bool) {
 }
 
 // LanguageCountByUser returns the top languages for a particular user
-func (m *model) LanguageCountByUser(login string, limit int) ([]LanguageCount, error) {
+func (m *model) LanguageCountByUser(login string, limit int) ([]schema.LanguageCount, error) {
 	return m.store.AggregateLanguageByUser(login, limit)
 }
 
 // MostPopularLanguage returns the most frequent language based on repo count in descending order
-func (m *model) MostPopularLanguage(limit int) ([]LanguageCount, error) {
+func (m *model) MostPopularLanguage(limit int) ([]schema.LanguageCount, error) {
 	return m.store.AggregateLanguages(limit)
 }
 
@@ -85,11 +85,11 @@ func (m *model) MostStars(limit int) ([]schema.Repo, error) {
 }
 
 // RepoCountByUser returns the users with most repos sorted in descending order
-func (m *model) RepoCountByUser(limit int) ([]UserCount, error) {
+func (m *model) RepoCountByUser(limit int) ([]schema.UserCount, error) {
 	return m.store.AggregateReposByUser(limit)
 }
 
 // ReposByLanguage returns the users with the most repo in the particular language
-func (m *model) ReposByLanguage(language string, limit int) ([]UserCount, error) {
+func (m *model) ReposByLanguage(language string, limit int) ([]schema.UserCount, error) {
 	return m.store.AggregateReposByLanguage(language, limit)
 }

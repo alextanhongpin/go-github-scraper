@@ -13,13 +13,13 @@ type Service interface {
 	Drop() error
 	Init() error
 	FindLastCreatedByUser(login string) (string, bool)
-	LanguageCountByUser(login string, limit int) ([]LanguageCount, error)
-	MostPopularLanguage(limit int) ([]LanguageCount, error)
+	LanguageCountByUser(login string, limit int) ([]schema.LanguageCount, error)
+	MostPopularLanguage(limit int) ([]schema.LanguageCount, error)
 	MostRecent(limit int) ([]schema.Repo, error)
 	MostRecentReposByLanguage(language string, limit int) ([]schema.Repo, error)
 	MostStars(limit int) ([]schema.Repo, error)
-	RepoCountByUser(limit int) ([]UserCount, error)
-	ReposByLanguage(language string, limit int) ([]UserCount, error)
+	RepoCountByUser(limit int) ([]schema.UserCount, error)
+	ReposByLanguage(language string, limit int) ([]schema.UserCount, error)
 }
 
 // New returns a new service with store

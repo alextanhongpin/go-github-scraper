@@ -158,6 +158,7 @@ func (w *worker) NewAnalyticBuilder(tab string) *cron.Cron {
 
 	c := cron.New()
 	c.AddFunc(tab, func() {
+		// Start: user_count
 		count, err := w.usvc.Count()
 		if err != nil {
 			zlog.Warn("error getting user count", zap.Error(err))
@@ -165,7 +166,9 @@ func (w *worker) NewAnalyticBuilder(tab string) *cron.Cron {
 		if err := w.asvc.PostUserCount(count); err != nil {
 			zlog.Warn("error updating user count", zap.Error(err))
 		}
+		// End: user_count
 
+		// Start: repo_count
 		count, err = w.rsvc.Count()
 		if err != nil {
 			zlog.Warn("error getting repo count", zap.Error(err))
@@ -173,7 +176,9 @@ func (w *worker) NewAnalyticBuilder(tab string) *cron.Cron {
 		if err := w.asvc.PostRepoCount(count); err != nil {
 			zlog.Warn("error updating repo count", zap.Error(err))
 		}
+		// End: repo_count
 
+		// Start: repos_most_recent
 		repos, err := w.rsvc.MostRecent(10)
 		if err != nil {
 			zlog.Warn("error fetching most recent repos", zap.Error(err))
@@ -182,37 +187,54 @@ func (w *worker) NewAnalyticBuilder(tab string) *cron.Cron {
 		if err := w.asvc.PostReposMostRecent(repos); err != nil {
 			zlog.Warn("error updating most recent repos", zap.Error(err))
 		}
+		// End: repos_most_recent
 
+		// Start: repo_count_by_user
+		users, err := w.rsvc.RepoCountByUser(10)
+		if err != nil {
+			zlog.Warn("error fetching repo count by users", zap.Error(err))
+		}
+
+		if err := w.asvc.PostRepoCountByUser(users); err != nil {
+			zlog.Warn("error updating repo count by users", zap.Error(err))
+		}
+		// End: repo_count_by_user
+
+		// Start: repos_most_stars
 		// repos, err = w.rsvc.MostStars(10)
 		// if err != nil {
 		// 	zlog.Warn("error fetching most stars repos", zap.Error(err))
 		// }
+		// End: repos_most_stars
 
+		// Start: languages_most_popular
 		// languages, err := w.rsvc.MostPopularLanguage(20)
 		// if err != nil {
 		// 	zlog.Warn("error fetching language count repos", zap.Error(err))
 		// }
+		// End: languages_most_popular
 
-		// users, err := w.rsvc.RepoCountByUser(10)
-		// if err != nil {
-		// 	zlog.Warn("error fetching language count repos", zap.Error(err))
-		// }
-
+		// Start: language_count_by_user
 		// languages, err := w.rsvc.LanguageCountByUser("login", 10)
 		// if err != nil {
 		// 	zlog.Warn("error fetching language count repos", zap.Error(err))
 		// }
+		// End: language_count_by_user
 
 		// for _, lang := range languages {
+		// Start: repos_most_recent_by_language
 		// 	repos, err := w.rsvc.MostRecentReposByLanguage(lang.Name, 20)
 		// 	if err != nil {
 		// 		zlog.Warn("error fetching language count repos", zap.Error(err))
 		// 	}
+		// End: repos_most_recent_by_language
 
+		// Start: repos_by_language
 		// 	users, err := w.rsvc.ReposByLanguage(lang.Name, 10)
 		// 	if err != nil {
 		// 		zlog.Warn("error fetching language count repos", zap.Error(err))
 		// 	}
+		// End: repos_by_language
 		// }
 
 		// Count() (int, error)

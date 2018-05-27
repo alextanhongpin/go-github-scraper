@@ -825,3 +825,24 @@ Output:
 	}
 	log.Println("change", change)
 ```
+
+## Golang Enum String 
+
+```golang
+var enums = [...]string{
+	"user_count",
+	"repo_count",
+}
+
+const (
+	// EnumUserCount represents the type for the user_count
+	EnumUserCount Enum = iota
+	// EnumRepoCount represents the type for the repo_count
+	EnumRepoCount
+)
+
+func (e Enum) String() string {
+	return enums[e]
+}
+
+```

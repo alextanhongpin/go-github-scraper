@@ -38,6 +38,14 @@ func (e *endpoints) GetAnalytics() httprouter.Handle {
 		case EnumReposMostRecent:
 			count, err := e.svc.GetReposMostRecent()
 			util.ResponseJSON(w, count, err)
+		case EnumRepoCountByUser:
+			count, err := e.svc.GetRepoCountByUser()
+			util.ResponseJSON(w, count, err)
+		case EnumReposMostStars:
+		case EnumMostPopularLanguage:
+		case EnumLanguageCountByUser:
+		case EnumMostRecentReposByLanguage:
+		case EnumReposByLanguage:
 		default:
 			http.Error(w, "query type is missing", http.StatusBadRequest)
 			return

@@ -20,7 +20,7 @@ func (m *model) Init() error {
 	return m.store.Init()
 }
 
-func (m *model) GetUserCount() (*UserCount, error) {
+func (m *model) GetUserCount() (*schema.UserCount, error) {
 	// Validate...
 	// Tracing...
 	return m.store.GetUserCount()
@@ -43,4 +43,12 @@ func (m *model) GetReposMostRecent() (*ReposMostRecent, error) {
 
 func (m *model) PostReposMostRecent(data []schema.Repo) error {
 	return m.store.PostReposMostRecent(data)
+}
+
+func (m *model) GetRepoCountByUser() (*RepoCountByUser, error) {
+	return m.store.GetRepoCountByUser()
+}
+
+func (m *model) PostRepoCountByUser(users []schema.UserCount) error {
+	return m.store.PostRepoCountByUser(users)
 }
