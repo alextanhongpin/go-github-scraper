@@ -25,6 +25,16 @@ type (
 		PostReposMostRecent(data []schema.Repo) error
 		GetRepoCountByUser() (*RepoCountByUser, error)
 		PostRepoCountByUser(repos []schema.UserCount) error
+		GetReposMostStars() (*ReposMostStars, error)
+		PostReposMostStars(repos []schema.Repo) error
+		GetMostPopularLanguage() (*MostPopularLanguage, error)
+		PostMostPopularLanguage(languages []schema.LanguageCount) error
+		GetLanguageCountByUser() (*LanguageCountByUser, error)
+		PostLanguageCountByUser(languages []schema.LanguageCount) error
+		GetMostRecentReposByLanguage() (*MostRecentReposByLanguage, error)
+		PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error
+		GetReposByLanguage() (*ReposByLanguage, error)
+		PostReposByLanguage(users []schema.UserCountByLanguage) error
 	}
 
 	store struct {
@@ -179,17 +189,162 @@ func (s *store) PostRepoCountByUser(users []schema.UserCount) error {
 	return nil
 }
 
-// func (s *store) GetReposMostStars(data) error  {}
-// func (s *store) PostReposMostStars(data) error {}
+func (s *store) GetReposMostStars() (*ReposMostStars, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var res ReposMostStars
+	if err := c.
+		Find(bson.M{"type": EnumReposMostStars}).
+		One(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
 
-// func (s *store) GetMostPopularLanguage(data) error  {}
-// func (s *store) PostMostPopularLanguage(data) error {}
+func (s *store) PostReposMostStars(repos []schema.Repo) error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	if _, err := c.Upsert(
+		bson.M{"type": EnumReposMostStars},
+		bson.M{
+			"$set": bson.M{
+				"repos":     repos,
+				"updatedAt": util.NewUTCDate(),
+			},
+			"$setOnInsert": bson.M{
+				"createdAt": util.NewUTCDate(),
+			},
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}
 
-// func (s *store) GetLanguageCountByUser(data) error  {}
-// func (s *store) PostLanguageCountByUser(data) error {}
+func (s *store) GetMostPopularLanguage() (*MostPopularLanguage, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var res MostPopularLanguage
+	if err := c.
+		Find(bson.M{"type": EnumMostPopularLanguage}).
+		One(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
 
-// func (s *store) GetMostRecentReposByLanguage(data) error  {}
-// func (s *store) PostMostRecentReposByLanguage(data) error {}
+func (s *store) PostMostPopularLanguage(languages []schema.LanguageCount) error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	if _, err := c.Upsert(
+		bson.M{"type": EnumMostPopularLanguage},
+		bson.M{
+			"$set": bson.M{
+				"languages": languages,
+				"updatedAt": util.NewUTCDate(),
+			},
+			"$setOnInsert": bson.M{
+				"createdAt": util.NewUTCDate(),
+			},
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}
 
-// func (s *store) GetReposByLanguage(data) error  {}
-// func (s *store) PostReposByLanguage(data) error {}
+func (s *store) GetLanguageCountByUser() (*LanguageCountByUser, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var res LanguageCountByUser
+	if err := c.
+		Find(bson.M{"type": EnumLanguageCountByUser}).
+		One(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (s *store) PostLanguageCountByUser(languages []schema.LanguageCount) error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	if _, err := c.Upsert(
+		bson.M{"type": EnumLanguageCountByUser},
+		bson.M{
+			"$set": bson.M{
+				"languages": languages,
+				"updatedAt": util.NewUTCDate(),
+			},
+			"$setOnInsert": bson.M{
+				"createdAt": util.NewUTCDate(),
+			},
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *store) GetMostRecentReposByLanguage() (*MostRecentReposByLanguage, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var res MostRecentReposByLanguage
+	if err := c.
+		Find(bson.M{"type": EnumMostRecentReposByLanguage}).
+		One(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (s *store) PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	if _, err := c.Upsert(
+		bson.M{"type": EnumMostRecentReposByLanguage},
+		bson.M{
+			"$set": bson.M{
+				"repos":     repos,
+				"updatedAt": util.NewUTCDate(),
+			},
+			"$setOnInsert": bson.M{
+				"createdAt": util.NewUTCDate(),
+			},
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *store) GetReposByLanguage() (*ReposByLanguage, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var res ReposByLanguage
+	if err := c.
+		Find(bson.M{"type": EnumReposByLanguage}).
+		One(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (s *store) PostReposByLanguage(users []schema.UserCountByLanguage) error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	if _, err := c.Upsert(
+		bson.M{"type": EnumReposByLanguage},
+		bson.M{
+			"$set": bson.M{
+				"users":     users,
+				"updatedAt": util.NewUTCDate(),
+			},
+			"$setOnInsert": bson.M{
+				"createdAt": util.NewUTCDate(),
+			},
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}

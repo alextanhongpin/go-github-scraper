@@ -52,3 +52,43 @@ func (m *model) GetRepoCountByUser() (*RepoCountByUser, error) {
 func (m *model) PostRepoCountByUser(users []schema.UserCount) error {
 	return m.store.PostRepoCountByUser(users)
 }
+
+func (m *model) GetReposMostStars() (*ReposMostStars, error) {
+	return m.store.GetReposMostStars()
+}
+
+func (m *model) PostReposMostStars(repos []schema.Repo) error {
+	return m.store.PostReposMostStars(repos)
+}
+
+func (m *model) GetMostPopularLanguage() (*MostPopularLanguage, error) {
+	return m.store.GetMostPopularLanguage()
+}
+
+func (m *model) PostMostPopularLanguage(languages []schema.LanguageCount) error {
+	return m.store.PostMostPopularLanguage(languages)
+}
+
+func (m *model) GetLanguageCountByUser() (*LanguageCountByUser, error) {
+	return m.store.GetLanguageCountByUser()
+}
+
+func (m *model) PostLanguageCountByUser(languages []schema.LanguageCount) error {
+	return m.store.PostLanguageCountByUser(languages)
+}
+
+func (m *model) GetMostRecentReposByLanguage() (*MostRecentReposByLanguage, error) {
+	return m.store.GetMostRecentReposByLanguage()
+}
+
+func (m *model) PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error {
+	return m.store.PostMostRecentReposByLanguage(repos)
+}
+
+func (m *model) GetReposByLanguage() (*ReposByLanguage, error) {
+	return m.store.GetReposByLanguage()
+}
+
+func (m *model) PostReposByLanguage(users []schema.UserCountByLanguage) error {
+	return m.store.PostReposByLanguage(users)
+}

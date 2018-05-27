@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/api/github"
+	"github.com/alextanhongpin/go-github-scraper/internal/schema"
 	"github.com/alextanhongpin/go-github-scraper/internal/util"
 	"github.com/alextanhongpin/go-github-scraper/service/analytic"
 	"github.com/alextanhongpin/go-github-scraper/service/repo"
@@ -201,17 +202,23 @@ func (w *worker) NewAnalyticBuilder(tab string) *cron.Cron {
 		// End: repo_count_by_user
 
 		// Start: repos_most_stars
-		// repos, err = w.rsvc.MostStars(10)
-		// if err != nil {
-		// 	zlog.Warn("error fetching most stars repos", zap.Error(err))
-		// }
+		repos, err = w.rsvc.MostStars(10)
+		if err != nil {
+			zlog.Warn("error fetching most stars repos", zap.Error(err))
+		}
+		if err := w.asvc.PostReposMostStars(repos); err != nil {
+			zlog.Warn("error updating repo count by users", zap.Error(err))
+		}
 		// End: repos_most_stars
 
 		// Start: languages_most_popular
-		// languages, err := w.rsvc.MostPopularLanguage(20)
-		// if err != nil {
-		// 	zlog.Warn("error fetching language count repos", zap.Error(err))
-		// }
+		languages, err := w.rsvc.MostPopularLanguage(20)
+		if err != nil {
+			zlog.Warn("error fetching language most popular", zap.Error(err))
+		}
+		if err := w.asvc.PostMostPopularLanguage(languages); err != nil {
+			zlog.Warn("error updating language most popular", zap.Error(err))
+		}
 		// End: languages_most_popular
 
 		// Start: language_count_by_user
@@ -219,32 +226,42 @@ func (w *worker) NewAnalyticBuilder(tab string) *cron.Cron {
 		// if err != nil {
 		// 	zlog.Warn("error fetching language count repos", zap.Error(err))
 		// }
+		// if err := w.asvc.PostLanguageCountByUser(languages); err != nil {
+		// 	zlog.Warn("error updating language most popular", zap.Error(err))
+		// }
 		// End: language_count_by_user
 
-		// for _, lang := range languages {
-		// Start: repos_most_recent_by_language
-		// 	repos, err := w.rsvc.MostRecentReposByLanguage(lang.Name, 20)
-		// 	if err != nil {
-		// 		zlog.Warn("error fetching language count repos", zap.Error(err))
-		// 	}
-		// End: repos_most_recent_by_language
+		var reposByLanguages []schema.RepoLanguage
+		var userCountByLanguage []schema.UserCountByLanguage
+		for _, lang := range languages {
+			// Start: repos_most_recent_by_language
+			r, err := w.rsvc.MostRecentReposByLanguage(lang.Name, 10)
+			if err != nil {
+				zlog.Warn("error fetching most recent repos by language", zap.Error(err))
+			}
+			reposByLanguages = append(reposByLanguages, schema.RepoLanguage{
+				Language: lang.Name,
+				Repos:    r,
+			})
+			// End: repos_most_recent_by_language
 
-		// Start: repos_by_language
-		// 	users, err := w.rsvc.ReposByLanguage(lang.Name, 10)
-		// 	if err != nil {
-		// 		zlog.Warn("error fetching language count repos", zap.Error(err))
-		// 	}
-		// End: repos_by_language
-		// }
-
-		// Count() (int, error)
-		// MostRecent(limit int) ([]Repo, error)
-		// MostStars(limit int) ([]Repo, error)
-		// MostPopularLanguage(limit int) ([]LanguageCount, error)
-		// RepoCountByUser(limit int) ([]UserCount, error)
-		// LanguageCountByUser(login string, limit int) ([]LanguageCount, error)
-		// MostRecentReposByLanguage(language string, limit int) ([]Repo, error)
-		// ReposByLanguage(language string, limit int) ([]UserCount, error)
+			// Start: repos_by_language
+			users, err := w.rsvc.ReposByLanguage(lang.Name, 10)
+			if err != nil {
+				zlog.Warn("error fetching user repo count by language", zap.Error(err))
+			}
+			userCountByLanguage = append(userCountByLanguage, schema.UserCountByLanguage{
+				Language: lang.Name,
+				Users:    users,
+			})
+			// End: repos_by_language
+		}
+		if err := w.asvc.PostMostRecentReposByLanguage(reposByLanguages); err != nil {
+			zlog.Warn("error updating most recent repos by language", zap.Error(err))
+		}
+		if err := w.asvc.PostReposByLanguage(userCountByLanguage); err != nil {
+			zlog.Warn("error updating user repo count by language", zap.Error(err))
+		}
 		zlog.Info("NewAnalyticBuilder", zap.Bool("ran", true))
 	})
 	return c

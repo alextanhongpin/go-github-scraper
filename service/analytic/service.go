@@ -16,6 +16,16 @@ type Service interface {
 	PostReposMostRecent(data []schema.Repo) error
 	GetRepoCountByUser() (*RepoCountByUser, error)
 	PostRepoCountByUser(users []schema.UserCount) error
+	GetReposMostStars() (*ReposMostStars, error)
+	PostReposMostStars(repos []schema.Repo) error
+	GetMostPopularLanguage() (*MostPopularLanguage, error)
+	PostMostPopularLanguage(languages []schema.LanguageCount) error
+	GetLanguageCountByUser() (*LanguageCountByUser, error)
+	PostLanguageCountByUser(languages []schema.LanguageCount) error
+	GetMostRecentReposByLanguage() (*MostRecentReposByLanguage, error)
+	PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error
+	GetReposByLanguage() (*ReposByLanguage, error)
+	PostReposByLanguage(users []schema.UserCountByLanguage) error
 }
 
 // New returns a new analytic service model

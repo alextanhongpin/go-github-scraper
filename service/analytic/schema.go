@@ -54,11 +54,11 @@ type LanguageCountByUser struct {
 type MostRecentReposByLanguage struct {
 	Type     string `json:"type,omitempty" bson:"type,omitempty"`
 	DateInfo `bson:",inline"`
-	Repos    []schema.Repo `json:"repos,omitempty" bson:"repos,omitempty"`
+	Repos    []schema.RepoLanguage `json:"repos,omitempty" bson:"repos,omitempty"`
 }
 
 type ReposByLanguage struct {
 	Type     string `json:"type,omitempty" bson:"type,omitempty"`
 	DateInfo `bson:",inline"`
-	Users    []schema.UserCount `json:"users,omitempty" bson:"users,omitempty"`
+	Users    []schema.UserCountByLanguage `json:"users,omitempty" bson:"users,omitempty"`
 }

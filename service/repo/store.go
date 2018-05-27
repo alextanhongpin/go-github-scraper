@@ -342,7 +342,8 @@ func (s *store) AggregateReposByLanguage(language string, limit int) ([]schema.U
 				"isLanguage": bson.M{
 					"$in": []string{language, "$languages"},
 				},
-				"login": 1,
+				"login":     1,
+				"avatarUrl": 1,
 			},
 		},
 		bson.M{
