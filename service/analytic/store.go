@@ -17,22 +17,31 @@ var errTypeAssertion = errors.New("unable to perform type assertion")
 type (
 	Store interface {
 		Init() error
+
 		GetUserCount() (*schema.UserCount, error)
 		PostUserCount(count int) error
+
 		GetRepoCount() (*RepoCount, error)
 		PostRepoCount(count int) error
+
 		GetReposMostRecent() (*ReposMostRecent, error)
 		PostReposMostRecent(data []schema.Repo) error
+
 		GetRepoCountByUser() (*RepoCountByUser, error)
 		PostRepoCountByUser(repos []schema.UserCount) error
+
 		GetReposMostStars() (*ReposMostStars, error)
 		PostReposMostStars(repos []schema.Repo) error
+
 		GetMostPopularLanguage() (*MostPopularLanguage, error)
 		PostMostPopularLanguage(languages []schema.LanguageCount) error
+
 		GetLanguageCountByUser() (*LanguageCountByUser, error)
 		PostLanguageCountByUser(languages []schema.LanguageCount) error
+
 		GetMostRecentReposByLanguage() (*MostRecentReposByLanguage, error)
 		PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error
+
 		GetReposByLanguage() (*ReposByLanguage, error)
 		PostReposByLanguage(users []schema.UserCountByLanguage) error
 	}
@@ -76,21 +85,10 @@ func (s *store) GetUserCount() (*schema.UserCount, error) {
 func (s *store) PostUserCount(count int) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	if _, err := c.Upsert(
-		bson.M{"type": EnumUserCount},
-		bson.M{
-			"$set": bson.M{
-				"count":     count,
-				"updatedAt": util.NewUTCDate(),
-			},
-			"$setOnInsert": bson.M{
-				"createdAt": util.NewUTCDate(),
-			},
-		},
-	); err != nil {
-		return err
-	}
-	return nil
+	return upsert(c, EnumUserCount, bson.M{
+		"count":     count,
+		"updatedAt": util.NewUTCDate(),
+	})
 }
 
 func (s *store) GetRepoCount() (*RepoCount, error) {
@@ -108,21 +106,10 @@ func (s *store) GetRepoCount() (*RepoCount, error) {
 func (s *store) PostRepoCount(count int) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	if _, err := c.Upsert(
-		bson.M{"type": EnumRepoCount},
-		bson.M{
-			"$set": bson.M{
-				"count":     count,
-				"updatedAt": util.NewUTCDate(),
-			},
-			"$setOnInsert": bson.M{
-				"createdAt": util.NewUTCDate(),
-			},
-		},
-	); err != nil {
-		return err
-	}
-	return nil
+	return upsert(c, EnumRepoCount, bson.M{
+		"count":     count,
+		"updatedAt": util.NewUTCDate(),
+	})
 }
 
 func (s *store) GetReposMostRecent() (*ReposMostRecent, error) {
@@ -140,21 +127,10 @@ func (s *store) GetReposMostRecent() (*ReposMostRecent, error) {
 func (s *store) PostReposMostRecent(repos []schema.Repo) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	if _, err := c.Upsert(
-		bson.M{"type": EnumReposMostRecent},
-		bson.M{
-			"$set": bson.M{
-				"repos":     repos,
-				"updatedAt": util.NewUTCDate(),
-			},
-			"$setOnInsert": bson.M{
-				"createdAt": util.NewUTCDate(),
-			},
-		},
-	); err != nil {
-		return err
-	}
-	return nil
+	return upsert(c, EnumReposMostRecent, bson.M{
+		"repos":     repos,
+		"updatedAt": util.NewUTCDate(),
+	})
 }
 
 func (s *store) GetRepoCountByUser() (*RepoCountByUser, error) {
@@ -172,21 +148,10 @@ func (s *store) GetRepoCountByUser() (*RepoCountByUser, error) {
 func (s *store) PostRepoCountByUser(users []schema.UserCount) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	if _, err := c.Upsert(
-		bson.M{"type": EnumRepoCountByUser},
-		bson.M{
-			"$set": bson.M{
-				"users":     users,
-				"updatedAt": util.NewUTCDate(),
-			},
-			"$setOnInsert": bson.M{
-				"createdAt": util.NewUTCDate(),
-			},
-		},
-	); err != nil {
-		return err
-	}
-	return nil
+	return upsert(c, EnumRepoCountByUser, bson.M{
+		"users":     users,
+		"updatedAt": util.NewUTCDate(),
+	})
 }
 
 func (s *store) GetReposMostStars() (*ReposMostStars, error) {
@@ -204,21 +169,10 @@ func (s *store) GetReposMostStars() (*ReposMostStars, error) {
 func (s *store) PostReposMostStars(repos []schema.Repo) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	if _, err := c.Upsert(
-		bson.M{"type": EnumReposMostStars},
-		bson.M{
-			"$set": bson.M{
-				"repos":     repos,
-				"updatedAt": util.NewUTCDate(),
-			},
-			"$setOnInsert": bson.M{
-				"createdAt": util.NewUTCDate(),
-			},
-		},
-	); err != nil {
-		return err
-	}
-	return nil
+	return upsert(c, EnumReposMostStars, bson.M{
+		"repos":     repos,
+		"updatedAt": util.NewUTCDate(),
+	})
 }
 
 func (s *store) GetMostPopularLanguage() (*MostPopularLanguage, error) {
@@ -236,21 +190,10 @@ func (s *store) GetMostPopularLanguage() (*MostPopularLanguage, error) {
 func (s *store) PostMostPopularLanguage(languages []schema.LanguageCount) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	if _, err := c.Upsert(
-		bson.M{"type": EnumMostPopularLanguage},
-		bson.M{
-			"$set": bson.M{
-				"languages": languages,
-				"updatedAt": util.NewUTCDate(),
-			},
-			"$setOnInsert": bson.M{
-				"createdAt": util.NewUTCDate(),
-			},
-		},
-	); err != nil {
-		return err
-	}
-	return nil
+	return upsert(c, EnumMostPopularLanguage, bson.M{
+		"languages": languages,
+		"updatedAt": util.NewUTCDate(),
+	})
 }
 
 func (s *store) GetLanguageCountByUser() (*LanguageCountByUser, error) {
@@ -268,21 +211,10 @@ func (s *store) GetLanguageCountByUser() (*LanguageCountByUser, error) {
 func (s *store) PostLanguageCountByUser(languages []schema.LanguageCount) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	if _, err := c.Upsert(
-		bson.M{"type": EnumLanguageCountByUser},
-		bson.M{
-			"$set": bson.M{
-				"languages": languages,
-				"updatedAt": util.NewUTCDate(),
-			},
-			"$setOnInsert": bson.M{
-				"createdAt": util.NewUTCDate(),
-			},
-		},
-	); err != nil {
-		return err
-	}
-	return nil
+	return upsert(c, EnumLanguageCountByUser, bson.M{
+		"languages": languages,
+		"updatedAt": util.NewUTCDate(),
+	})
 }
 
 func (s *store) GetMostRecentReposByLanguage() (*MostRecentReposByLanguage, error) {
@@ -300,21 +232,10 @@ func (s *store) GetMostRecentReposByLanguage() (*MostRecentReposByLanguage, erro
 func (s *store) PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	if _, err := c.Upsert(
-		bson.M{"type": EnumMostRecentReposByLanguage},
-		bson.M{
-			"$set": bson.M{
-				"repos":     repos,
-				"updatedAt": util.NewUTCDate(),
-			},
-			"$setOnInsert": bson.M{
-				"createdAt": util.NewUTCDate(),
-			},
-		},
-	); err != nil {
-		return err
-	}
-	return nil
+	return upsert(c, EnumMostRecentReposByLanguage, bson.M{
+		"repos":     repos,
+		"updatedAt": util.NewUTCDate(),
+	})
 }
 
 func (s *store) GetReposByLanguage() (*ReposByLanguage, error) {
@@ -332,13 +253,17 @@ func (s *store) GetReposByLanguage() (*ReposByLanguage, error) {
 func (s *store) PostReposByLanguage(users []schema.UserCountByLanguage) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
+	return upsert(c, EnumReposByLanguage, bson.M{
+		"users":     users,
+		"updatedAt": util.NewUTCDate(),
+	})
+}
+
+func upsert(c *mgo.Collection, enum string, data bson.M) error {
 	if _, err := c.Upsert(
-		bson.M{"type": EnumReposByLanguage},
+		bson.M{"type": enum},
 		bson.M{
-			"$set": bson.M{
-				"users":     users,
-				"updatedAt": util.NewUTCDate(),
-			},
+			"$set": data,
 			"$setOnInsert": bson.M{
 				"createdAt": util.NewUTCDate(),
 			},

@@ -1,8 +1,5 @@
 package analyticsvc
 
-// Enum represents the analytic type
-// type Enum string
-
 const (
 	EnumUserCount                 = "user_count"
 	EnumRepoCount                 = "repo_count"
