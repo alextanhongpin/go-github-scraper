@@ -11,6 +11,7 @@ type Service interface {
 	Count() (int, error)
 	Drop() error
 	Init() error
+	FindOne(login string) (*User, error)
 	FindLastCreated() (string, bool)
 	FindLastFetched(limit int) ([]User, error)
 	MostRecent(limit int) ([]User, error)

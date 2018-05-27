@@ -19,6 +19,7 @@ import (
 )
 
 func init() {
+	viper.AutomaticEnv()
 	viper.SetDefault("crontab_user", "*/20 * * * * *")                     // The crontab for user, running every 20 seconds
 	viper.SetDefault("crontab_repo", "0 * * * * *")                        // The crontab for repo, running every minute
 	viper.SetDefault("crontab_analytic", "@daily")                         // The crontab for analytic, running daily
@@ -32,14 +33,13 @@ func init() {
 	viper.SetDefault("github_token", "")                                   // The Github's access token used to make call to the GraphQL Endpoint
 	viper.SetDefault("github_uri", "https://api.github.com/graphql")       // The Github's GraphQL Endpoint
 	viper.SetDefault("port", ":8080")                                      // The TCP port of the application
-
-	if !viper.IsSet("github_token") || viper.GetString("github_token") == "" {
+	if viper.GetString("github_token") == "" {
 		panic("github_token environment variable is missing")
 	}
 }
 
 func main() {
-	// // Setup Logger
+	// Setup Logger
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatal(err)

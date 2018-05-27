@@ -22,3 +22,7 @@ type User struct {
 type GetUserCountResponse struct {
 	Count int `json:"count"`
 }
+
+type GetUserResponse struct {
+	Data *User `json:"data"`
+}

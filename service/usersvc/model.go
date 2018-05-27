@@ -64,3 +64,7 @@ func (m *model) Count() (int, error) {
 func (m *model) UpdateOne(login string) error {
 	return m.store.UpdateOne(login)
 }
+
+func (m *model) FindOne(login string) (*User, error) {
+	return m.store.FindOne(login)
+}

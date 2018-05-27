@@ -23,7 +23,8 @@ type (
 func MakeEndpoints(svc Service, r *httprouter.Router) {
 	e := &endpoints{svc: svc}
 
-	r.GET("/users/count", e.GetUserCount())
+	r.GET("/users/:login", e.GetUser())
+	r.GET("/users", e.GetUserCount())
 }
 
 func (e *endpoints) GetUserCount() httprouter.Handle {
@@ -32,3 +33,16 @@ func (e *endpoints) GetUserCount() httprouter.Handle {
 		util.ResponseJSON(w, GetUserCountResponse{count}, err)
 	}
 }
+
+func (e *endpoints) GetUser() httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		login := ps.ByName("login")
+		user, err := e.svc.FindOne(login)
+		util.ResponseJSON(w, GetUserResponse{user}, err)
+	}
+}
+
+// Stars: 84Watchers: 84Forks: 18
+// Keywords: simple × 43sample × 38example × 19go × 18api × 16nodejs × 15grpc × 15node × 14using × 14golang × 13
+
+// Languages: JavaScript 41%Go 22%Jupyter Notebook 7%Python 6%Rust 4%HTML 3%C# 2%Makefile 2%Scala 2%HCL 2%
