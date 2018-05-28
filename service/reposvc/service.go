@@ -1,9 +1,16 @@
+// Package reposvc defines the service for the repo microservice
+// The interface defines the method that exists for the service
+// and should have ctx as the first arguments to support cancellation/deadlines etc
+// Logging, tracing etc should be done at the service level, not store
 package reposvc
 
 import (
+	"context"
+
 	"github.com/alextanhongpin/go-github-scraper/api/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/database"
 	"github.com/alextanhongpin/go-github-scraper/internal/schema"
+	"go.uber.org/zap"
 )
 
 // Service represents the interface for the repo service
@@ -25,9 +32,10 @@ type Service interface {
 	ForksFor(login string) (int64, error)
 	KeywordsFor(login string, limit int) ([]schema.Keyword, error)
 	DistinctLogin() ([]string, error)
+	GetProfile(ctx context.Context, login string) schema.Profile
 }
 
 // New returns a new service with store
-func New(db *database.DB) Service {
-	return NewModel(NewStore(db, database.Repos))
+func New(db *database.DB, zlog *zap.Logger) Service {
+	return NewModel(NewStore(db, database.Repos), zlog)
 }

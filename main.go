@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"os/signal"
 	"runtime"
 	rpprof "runtime/pprof"
+	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/api/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/database"
@@ -39,6 +42,7 @@ func init() {
 	viper.SetDefault("port", ":8080")                                      // The TCP port of the application
 	viper.SetDefault("cpuprofile", "cpu.prof")                             // Write cpuprofile to file, e.g. cpu.prof
 	viper.SetDefault("memprofile", "mem.prof")                             // Write memoryprofile to file, e.g. mem.prof
+	viper.SetDefault("graceful_timeout", "15")                             // The duration for which the server gracefully wait for existing connections to finish
 	if viper.GetString("github_token") == "" {
 		panic("github_token environment variable is missing")
 	}
@@ -69,7 +73,7 @@ func main() {
 
 	// Setup services
 	asvc := analyticsvc.New(db)
-	rsvc := reposvc.New(db)
+	rsvc := reposvc.New(db, logger)
 	usvc := usersvc.New(db)
 	psvc := profilesvc.New(db)
 	gsvc := github.New(
@@ -132,7 +136,30 @@ func main() {
 	}
 
 	// Setup server
-	server := util.NewHTTPServer(viper.GetString("port"), r)
-	log.Printf("listening to port *%s. press ctrl + c to cancel.\n", viper.GetString("port"))
-	log.Fatal(server.ListenAndServe())
+	srv := util.NewHTTPServer(viper.GetString("port"), r)
+	// Run our server in a goroutine so that it doesn't block
+
+	go func() {
+		log.Printf("listening to port *%s. press ctrl + c to cancel.\n", viper.GetString("port"))
+		log.Fatal(srv.ListenAndServe())
+	}()
+
+	c := make(chan os.Signal, 1)
+
+	// Accept graceful shutdowns when quit via SIGINT (Ctrl + C) SIGKILL,
+	// SIGQUIT or SIGTERM (Ctrl + /) will not be caught.
+	signal.Notify(c, os.Interrupt)
+
+	// Block until we receive our signal
+	<-c
+
+	// Create a deadline to wait for.
+	ctx, cancel := context.WithTimeout(context.Background(), viper.GetDuration("graceful_timeout")*time.Second)
+	defer cancel()
+
+	// Doesn't block if no connections, but will otherwise wait until the timeout
+	srv.Shutdown(ctx)
+
+	log.Println("shutting down")
+	os.Exit(0)
 }

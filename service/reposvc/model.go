@@ -1,21 +1,25 @@
 package reposvc
 
 import (
+	"context"
 	"log"
 	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/api/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/schema"
+	"github.com/alextanhongpin/go-github-scraper/internal/util"
+	"go.uber.org/zap"
 )
 
 // Model represents the interface for the repo business logic
 type model struct {
 	store Store
+	zlog  *zap.Logger
 }
 
 // NewModel returns a pointer to the Model
-func NewModel(store Store) Service {
-	m := model{store: store}
+func NewModel(store Store, zlog *zap.Logger) Service {
+	m := model{store: store, zlog: zlog}
 	if err := m.Init(); err != nil {
 		log.Fatal(err)
 	}
@@ -112,4 +116,42 @@ func (m *model) KeywordsFor(login string, limit int) ([]schema.Keyword, error) {
 
 func (m *model) DistinctLogin() ([]string, error) {
 	return m.store.DistinctLogin()
+}
+
+func (m *model) GetProfile(ctx context.Context, login string) schema.Profile {
+	// TODO: Get request id from context
+	zlog := util.LoggerWithRequestID(m.zlog)
+	zlog = zlog.WithOptions(zap.Fields(zap.String("login", login)))
+
+	watchers, err := m.store.WatchersFor(login)
+	if err != nil {
+		zlog.Warn("error getting watcher count", zap.Error(err))
+	}
+	stargazers, err := m.store.StargazersFor(login)
+	if err != nil {
+		zlog.Warn("error getting stargazer count", zap.Error(err))
+	}
+	forks, err := m.store.ForksFor(login)
+	if err != nil {
+		zlog.Warn("error getting fork count", zap.Error(err))
+	}
+	keywords, err := m.store.KeywordsFor(login, 20)
+	if err != nil {
+		zlog.Warn("error getting keyword count", zap.Error(err))
+	}
+
+	zlog.Info("updated profile",
+		zap.String("login", login),
+		zap.Int64("watchers", watchers),
+		zap.Int64("stargazers", stargazers),
+		zap.Int64("forks", forks),
+		zap.Int("keywords", len(keywords)))
+
+	return schema.Profile{
+		Login:      login,
+		Watchers:   watchers,
+		Stargazers: stargazers,
+		Forks:      forks,
+		Keywords:   keywords,
+	}
 }

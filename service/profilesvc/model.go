@@ -1,6 +1,7 @@
 package profilesvc
 
 import (
+	"errors"
 	"log"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/schema"
@@ -34,5 +35,8 @@ func (m *model) UpdateProfile(login string, profile schema.Profile) error {
 }
 
 func (m *model) BulkUpsert(profiles []schema.Profile) error {
+	if len(profiles) > 1000 {
+		return errors.New("more than 1000 items")
+	}
 	return m.store.BulkUpsert(profiles)
 }

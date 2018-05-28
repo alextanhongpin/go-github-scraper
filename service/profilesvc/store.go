@@ -72,23 +72,21 @@ func (s *store) BulkUpsert(profiles []schema.Profile) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
-	c.DropCollection()
-
-	// bulk := c.Bulk()
-	// for _, profile := range profiles {
-	// 	bulk.Upsert(
-	// 		bson.M{"login": profile.Login},
-	// 		bson.M{
-	// 			"$set": profile.BSON(),
-	// 			"$setOnInsert": bson.M{
-	// 				"createdAt": util.NewUTCDate(),
-	// 			},
-	// 		},
-	// 	)
-	// }
-	// if _, err := bulk.Run(); err != nil {
-	// 	return err
-	// }
+	bulk := c.Bulk()
+	for _, profile := range profiles {
+		bulk.Upsert(
+			bson.M{"login": profile.Login},
+			bson.M{
+				"$set": profile.BSON(),
+				"$setOnInsert": bson.M{
+					"createdAt": util.NewUTCDate(),
+				},
+			},
+		)
+	}
+	if _, err := bulk.Run(); err != nil {
+		return err
+	}
 
 	return nil
 }

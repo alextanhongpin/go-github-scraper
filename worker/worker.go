@@ -65,12 +65,12 @@ func makeEndDate(start string, months int) string {
 
 func (w *worker) NewFetchUsers(tab string) *cron.Cron {
 	zlog := util.LoggerWithRequestID(w.zlog)
+	months := 6
 
 	c := cron.New()
 	c.AddFunc(tab, func() {
 		zlog.Info("start cron", zap.String("type", "fetch_users"))
 		start, ok := w.usvc.FindLastCreated()
-		months := 6
 		end := makeEndDate(start, months)
 		zlog.Info("fetch users since",
 			zap.String("start", start),
@@ -264,6 +264,7 @@ func (w *worker) NewAnalyticBuilder(tab string) *cron.Cron {
 func (w *worker) NewProfileBuilder(tab string) *cron.Cron {
 	zlog := util.LoggerWithRequestID(w.zlog)
 	maxWorkers := 16
+	perBucket := 500
 
 	c := cron.New()
 	c.AddFunc(tab, func() {})
@@ -279,39 +280,6 @@ func (w *worker) NewProfileBuilder(tab string) *cron.Cron {
 		}
 		zlog.Info("got distinct logins",
 			zap.Int("count", len(logins)))
-
-		buildProfile := func(l string) schema.Profile {
-			watchers, err := w.rsvc.WatchersFor(l)
-			if err != nil {
-				zlog.Warn("error getting watcher count", zap.String("login", l), zap.Error(err))
-			}
-			stargazers, err := w.rsvc.StargazersFor(l)
-			if err != nil {
-				zlog.Warn("error getting stargazer count", zap.String("login", l), zap.Error(err))
-			}
-			forks, err := w.rsvc.ForksFor(l)
-			if err != nil {
-				zlog.Warn("error getting fork count", zap.String("login", l), zap.Error(err))
-			}
-			keywords, err := w.rsvc.KeywordsFor(l, 20)
-			if err != nil {
-				zlog.Warn("error getting keyword count", zap.String("login", l), zap.Error(err))
-			}
-			zlog.Info("updated profile",
-				zap.String("login", l),
-				zap.Int64("watchers", watchers),
-				zap.Int64("stargazers", stargazers),
-				zap.Int64("forks", forks),
-				zap.Int("keywords", len(keywords)))
-
-			return schema.Profile{
-				Login:      l,
-				Watchers:   watchers,
-				Stargazers: stargazers,
-				Forks:      forks,
-				Keywords:   keywords,
-			}
-		}
 
 		toStream := func(ctx context.Context, args ...string) <-chan string {
 			c := make(chan string)
@@ -340,7 +308,7 @@ func (w *worker) NewProfileBuilder(tab string) *cron.Cron {
 					select {
 					case <-ctx.Done():
 						return
-					case c <- buildProfile(i):
+					case c <- w.rsvc.GetProfile(ctx, i):
 					}
 				}
 			}
@@ -360,17 +328,25 @@ func (w *worker) NewProfileBuilder(tab string) *cron.Cron {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		var profiles []schema.Profile
-		for p := range fanIn(ctx, maxWorkers, toStream(ctx, logins...)) {
-			profiles = append(profiles, p)
+		mapPartition, bucket := util.PartitionStrings(perBucket, logins)
+		var wg sync.WaitGroup
+		wg.Add(bucket)
+		for i := 0; i < bucket; i++ {
+			go func(i int) {
+				defer wg.Done()
+				l := mapPartition[i]
+				var profiles []schema.Profile
+				for p := range fanIn(ctx, maxWorkers, toStream(ctx, l...)) {
+					profiles = append(profiles, p)
+				}
+				if err = w.psvc.BulkUpsert(profiles); err != nil {
+					zlog.Warn("error upserting", zap.Error(err))
+				}
+				zlog.Info("upserted new profile", zap.Int("count", len(profiles)))
+			}(i)
 		}
-
-		if err = w.psvc.BulkUpsert(profiles); err != nil {
-			zlog.Warn("error upserting", zap.Error(err))
-		}
-		zlog.Info("upserted new profile", zap.Int("count", len(profiles)))
+		wg.Wait()
+		zlog.Info("build profile", zap.Bool("done", true))
 	}()
-	// Run this in the background
-
 	return c
 }

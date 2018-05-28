@@ -5,18 +5,15 @@ import (
 	"time"
 )
 
-const (
-	readTimeout  = 10
-	writeTimeout = 10
-)
-
 // NewHTTPServer returns a pointer to http.Server with pre-configured timeouts
-func NewHTTPServer(addr string, handler http.Handler) *http.Server {
+// to avoid Slowloris attack
+func NewHTTPServer(addr string, r http.Handler) *http.Server {
 	return &http.Server{
-		Addr:           addr,
-		Handler:        handler,
-		ReadTimeout:    time.Duration(readTimeout) * time.Second,
-		WriteTimeout:   time.Duration(writeTimeout) * time.Second,
+		Addr:           addr, // ":" + addr
+		Handler:        r,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		IdleTimeout:    60 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 }
