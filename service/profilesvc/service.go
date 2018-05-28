@@ -1,7 +1,7 @@
 package profilesvc
 
 import (
-	"github.com/alextanhongpin/go-github-scraper/internal/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
 	"github.com/alextanhongpin/go-github-scraper/internal/schema"
 )
 

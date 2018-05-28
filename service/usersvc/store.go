@@ -2,7 +2,8 @@ package usersvc
 
 import (
 	"github.com/alextanhongpin/go-github-scraper/api/github"
-	"github.com/alextanhongpin/go-github-scraper/internal/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/partitioner"
 	"github.com/alextanhongpin/go-github-scraper/internal/util"
 
 	mgo "gopkg.in/mgo.v2"
@@ -12,15 +13,15 @@ import (
 // Store provides the interface for the Service struct
 type (
 	Store interface {
-		Init() error
-		FindOne(login string) (*User, error)
-		FindAll(limit int, sort []string) ([]User, error)
-		PickLogin() ([]string, error)
-		FindLastCreated() (*User, error)
-		Upsert(github.User) error
 		BulkUpsert(users []github.User) error
 		Count() (int, error)
 		Drop() error
+		Init() error
+		FindOne(login string) (*User, error)
+		FindAll(limit int, sort []string) ([]User, error)
+		FindLastCreated() (*User, error)
+		PickLogin() ([]string, error)
+		Upsert(github.User) error
 		UpdateOne(login string) error
 	}
 
@@ -136,17 +137,26 @@ func (s *store) BulkUpsert(users []github.User) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
-	bulk := c.Bulk()
-	for _, user := range users {
-		bulk.Upsert(
-			bson.M{"login": user.Login},
-			bson.M{
-				"$set": user.BSON(),
-			},
-		)
-	}
-	if _, err := bulk.Run(); err != nil {
-		return err
+	perBulk := 500
+
+	partitions, bucket := partitioner.New(perBulk, len(users))
+
+	for i := 0; i < bucket; i++ {
+		p := partitions[i]
+
+		bulk := c.Bulk()
+		for _, user := range users[p.Start:p.End] {
+			bulk.Upsert(
+				bson.M{"login": user.Login},
+				bson.M{
+					"$set": user.BSON(),
+				},
+			)
+		}
+
+		if _, err := bulk.Run(); err != nil {
+			return err
+		}
 	}
 
 	return nil

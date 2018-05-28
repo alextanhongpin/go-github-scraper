@@ -1,5 +1,11 @@
 package github
 
+import (
+	"net/http"
+
+	"go.uber.org/zap"
+)
+
 // API represents the interface for Github's API
 type API interface {
 	FetchUsersCursor(location, start, end string, limit int) ([]User, error)
@@ -7,6 +13,6 @@ type API interface {
 }
 
 // New returns a new github api
-func New(token, endpoint string) API {
-	return NewModel(NewStore(token, endpoint))
+func New(client *http.Client, token, endpoint string, zlog *zap.Logger) API {
+	return NewModel(NewStore(client, token, endpoint), zlog)
 }

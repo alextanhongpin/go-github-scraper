@@ -1,9 +1,11 @@
 package profilesvc
 
 import (
-	"github.com/alextanhongpin/go-github-scraper/internal/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/partitioner"
 	"github.com/alextanhongpin/go-github-scraper/internal/schema"
 	"github.com/alextanhongpin/go-github-scraper/internal/util"
+
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -72,20 +74,28 @@ func (s *store) BulkUpsert(profiles []schema.Profile) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
-	bulk := c.Bulk()
-	for _, profile := range profiles {
-		bulk.Upsert(
-			bson.M{"login": profile.Login},
-			bson.M{
-				"$set": profile.BSON(),
-				"$setOnInsert": bson.M{
-					"createdAt": util.NewUTCDate(),
+	// Mongo can only process a max of 1000 items
+	perBulk := 500
+	partitions, bucket := partitioner.New(perBulk, len(profiles))
+
+	for i := 0; i < bucket; i++ {
+		p := partitions[i]
+
+		bulk := c.Bulk()
+		for _, profile := range profiles[p.Start:p.End] {
+			bulk.Upsert(
+				bson.M{"login": profile.Login},
+				bson.M{
+					"$set": profile.BSON(),
+					"$setOnInsert": bson.M{
+						"createdAt": util.NewUTCDate(),
+					},
 				},
-			},
-		)
-	}
-	if _, err := bulk.Run(); err != nil {
-		return err
+			)
+		}
+		if _, err := bulk.Run(); err != nil {
+			return err
+		}
 	}
 
 	return nil

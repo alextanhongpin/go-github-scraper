@@ -1,6 +1,8 @@
 package util
 
 import (
+	"context"
+
 	uuid "github.com/satori/go.uuid"
 	"go.uber.org/zap"
 )
@@ -14,4 +16,11 @@ func LoggerWithRequestID(zlog *zap.Logger) *zap.Logger {
 	}
 	return zlog.WithOptions(zap.Fields(
 		zap.String("requestId", requestID.String())))
+}
+
+func NewRequestIDWithContext(ctx context.Context, zlog *zap.Logger) (context.Context, *zap.Logger) {
+	ctx, reqID := ContextWithRequestID(ctx)
+	zlog = zlog.WithOptions(zap.Fields(
+		zap.String("requestId", reqID)))
+	return ctx, zlog
 }

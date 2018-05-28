@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
 )
 
 // Store represents the interface for the Github Service
@@ -26,9 +24,9 @@ type (
 )
 
 // NewStore returns a new store
-func NewStore(token, endpoint string) Store {
+func NewStore(client *http.Client, token, endpoint string) Store {
 	return &store{
-		client:   util.NewHTTPClient(),
+		client:   client,
 		token:    token,
 		endpoint: endpoint,
 	}

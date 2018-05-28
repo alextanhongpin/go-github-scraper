@@ -4,36 +4,35 @@ import (
 	"sort"
 
 	"github.com/alextanhongpin/go-github-scraper/api/github"
-	"github.com/alextanhongpin/go-github-scraper/internal/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/partitioner"
 	"github.com/alextanhongpin/go-github-scraper/internal/schema"
 
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
-var stopwords = []string{"i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now"}
-
 // Store provides the interface for the repo store
 type (
 	Store interface {
-		Init() error
-		FindOne(nameWithOwner string) (*schema.Repo, error)
-		FindAll(limit int, sort []string) ([]schema.Repo, error)
-		FindLastCreatedByUser(login string) (*schema.Repo, error)
-		Upsert(github.Repo) error
-		BulkUpsert(repos []github.Repo) error
-		Count() (int, error)
 		AggregateLanguages(limit int) ([]schema.LanguageCount, error)
 		AggregateReposByUser(limit int) ([]schema.UserCount, error)
 		AggregateLanguageByUser(login string, limit int) ([]schema.LanguageCount, error)
 		AggregateMostRecentReposByLanguage(language string, limit int) ([]schema.Repo, error)
 		AggregateReposByLanguage(language string, limit int) ([]schema.UserCount, error)
+		BulkUpsert(repos []github.Repo) error
+		Count() (int, error)
+		DistinctLogin() ([]string, error)
 		Drop() error
-		WatchersFor(login string) (int64, error)
-		StargazersFor(login string) (int64, error)
+		Init() error
+		FindAll(limit int, sort []string) ([]schema.Repo, error)
+		FindLastCreatedByUser(login string) (*schema.Repo, error)
+		FindOne(nameWithOwner string) (*schema.Repo, error)
 		ForksFor(login string) (int64, error)
 		KeywordsFor(login string, limit int) ([]schema.Keyword, error)
-		DistinctLogin() ([]string, error)
+		StargazersFor(login string) (int64, error)
+		Upsert(github.Repo) error
+		WatchersFor(login string) (int64, error)
 	}
 
 	// store is a struct that holds store configuration
@@ -122,17 +121,24 @@ func (s *store) BulkUpsert(repos []github.Repo) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
-	bulk := c.Bulk()
-	for _, repo := range repos {
-		bulk.Upsert(
-			bson.M{"nameWithOwner": repo.NameWithOwner},
-			bson.M{
-				"$set": repo.BSON(),
-			},
-		)
-	}
-	if _, err := bulk.Run(); err != nil {
-		return err
+	perBulk := 500
+	partitions, bucket := partitioner.New(perBulk, len(repos))
+
+	for i := 0; i < bucket; i++ {
+		p := partitions[i]
+
+		bulk := c.Bulk()
+		for _, repo := range repos[p.Start:p.End] {
+			bulk.Upsert(
+				bson.M{"nameWithOwner": repo.NameWithOwner},
+				bson.M{
+					"$set": repo.BSON(),
+				},
+			)
+		}
+		if _, err := bulk.Run(); err != nil {
+			return err
+		}
 	}
 
 	return nil

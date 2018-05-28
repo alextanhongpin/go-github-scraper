@@ -140,6 +140,11 @@ func (m *model) GetProfile(ctx context.Context, login string) schema.Profile {
 		zlog.Warn("error getting keyword count", zap.Error(err))
 	}
 
+	languages, err := m.store.AggregateLanguageByUser(login, 20)
+	if err != nil {
+		zlog.Warn("error fetching language count repos", zap.Error(err))
+	}
+
 	zlog.Info("updated profile",
 		zap.String("login", login),
 		zap.Int64("watchers", watchers),
@@ -153,5 +158,6 @@ func (m *model) GetProfile(ctx context.Context, login string) schema.Profile {
 		Stargazers: stargazers,
 		Forks:      forks,
 		Keywords:   keywords,
+		Languages:  languages,
 	}
 }

@@ -2,7 +2,7 @@ package usersvc
 
 import (
 	"github.com/alextanhongpin/go-github-scraper/api/github"
-	"github.com/alextanhongpin/go-github-scraper/internal/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
 )
 
 // Service represents the model of the user

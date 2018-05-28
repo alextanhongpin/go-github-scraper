@@ -22,15 +22,15 @@ func (db *DB) Collection(name string) (*mgo.Session, *mgo.Collection) {
 
 // New returns a new pointer to the DB struct
 func New(mongoURI, name string) *DB {
-	session, err := mgo.Dial(mongoURI)
+	s, err := mgo.Dial(mongoURI)
 	if err != nil {
 		panic(err)
 	}
 
-	session.SetMode(mgo.Monotonic, true)
+	s.SetMode(mgo.Monotonic, true)
 
 	return &DB{
-		Session: session,
+		Session: s,
 		Name:    name,
 	}
 }

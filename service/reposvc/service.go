@@ -8,7 +8,7 @@ import (
 	"context"
 
 	"github.com/alextanhongpin/go-github-scraper/api/github"
-	"github.com/alextanhongpin/go-github-scraper/internal/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
 	"github.com/alextanhongpin/go-github-scraper/internal/schema"
 	"go.uber.org/zap"
 )

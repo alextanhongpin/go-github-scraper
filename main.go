@@ -2,23 +2,22 @@ package main
 
 import (
 	"context"
-	"log"
-	"net/http"
-	"net/http/pprof"
+	stdlog "log"
 	"os"
 	"os/signal"
-	"runtime"
-	rpprof "runtime/pprof"
+	"sync"
 	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/api/github"
-	"github.com/alextanhongpin/go-github-scraper/internal/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/app/cronjob"
+	"github.com/alextanhongpin/go-github-scraper/internal/app/mediator"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/profiler"
 	"github.com/alextanhongpin/go-github-scraper/internal/util"
 	"github.com/alextanhongpin/go-github-scraper/service/analyticsvc"
 	"github.com/alextanhongpin/go-github-scraper/service/profilesvc"
 	"github.com/alextanhongpin/go-github-scraper/service/reposvc"
 	"github.com/alextanhongpin/go-github-scraper/service/usersvc"
-	"github.com/alextanhongpin/go-github-scraper/worker"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/viper"
@@ -49,21 +48,12 @@ func init() {
 }
 
 func main() {
-	if viper.GetString("cpuprofile") != "" {
-		f, err := os.Create(viper.GetString("cpuprofile"))
-		if err != nil {
-			log.Fatal("could not create CPU profile: ", err)
-		}
-		if err := rpprof.StartCPUProfile(f); err != nil {
-			log.Fatal("could not start CPU profile: ", err)
-		}
-		defer rpprof.StopCPUProfile()
-	}
+	profiler.MakeCPU(viper.GetString("cpuprofile"))
 
 	// Setup Logger
 	logger, err := zap.NewProduction()
 	if err != nil {
-		log.Fatal(err)
+		stdlog.Fatal(err)
 	}
 	defer logger.Sync()
 
@@ -72,77 +62,121 @@ func main() {
 	defer db.Close()
 
 	// Setup services
-	asvc := analyticsvc.New(db)
-	rsvc := reposvc.New(db, logger)
-	usvc := usersvc.New(db)
-	psvc := profilesvc.New(db)
-	gsvc := github.New(
-		viper.GetString("github_token"),
-		viper.GetString("github_uri"))
-
-	// Setup workers
-	w := worker.New(gsvc, asvc, psvc, rsvc, usvc, logger)
-
-	logger.Info("crontab_user", zap.Bool("is_enabled", viper.GetBool("crontab_user_enable")))
-	if viper.GetBool("crontab_user_enable") {
-		c1 := w.NewFetchUsers(viper.GetString("crontab_user"))
-		c1.Start()
+	m := mediator.Mediator{
+		Analytic: analyticsvc.New(db),
+		Github: github.New(util.NewHTTPClient(),
+			viper.GetString("github_token"),
+			viper.GetString("github_uri"),
+			logger),
+		Profile: profilesvc.New(db),
+		Repo:    reposvc.New(db, logger),
+		User:    usersvc.New(db),
 	}
 
-	logger.Info("crontab_repo", zap.Bool("is_enabled", viper.GetBool("crontab_repo_enable")))
-	if viper.GetBool("crontab_repo_enable") {
-		c2 := w.NewFetchRepos(viper.GetString("crontab_repo"))
-		c2.Start()
-	}
+	// Setup mediator services, which is basically an orchestration of multiple services
+	msvc := mediator.New(m, logger)
 
-	logger.Info("crontab_analytic", zap.Bool("is_enabled", viper.GetBool("crontab_analytic_enable")))
-	if viper.GetBool("crontab_analytic_enable") {
-		c3 := w.NewAnalyticBuilder(viper.GetString("crontab_analytic"))
-		c3.Start()
-	}
-
-	_ = w.NewProfileBuilder(viper.GetString("crontab_analytic"))
-	// c4.Start()
+	cronjob.Exec(
+		&cronjob.Config{
+			Name:        "Fetch Users",
+			Description: "Fetch the Github users data periodically based on location and created date, which is stored as delta timestamp",
+			Start:       false,
+			CronTab:     "* * * * * *",
+			Fn: func() error {
+				months := 6
+				perPage := 30
+				return msvc.FetchUsers("Malaysia", months, perPage)
+			},
+		},
+		&cronjob.Config{
+			Name:        "Fetch Repos",
+			Description: "Fetch the Github user's repos periodically based on the last fetched date",
+			Start:       false,
+			CronTab:     "* * * * * *",
+			Fn: func() error {
+				userPerPage := 30
+				repoPerPage := 30
+				return msvc.FetchRepos(userPerPage, repoPerPage)
+			},
+		},
+		&cronjob.Config{
+			Name:        "Update Profile",
+			Description: "Compute the new user profile based on the repos that are scraped daily",
+			Start:       false,
+			CronTab:     "* * * * * *",
+			Fn: func() error {
+				numWorkers := 16
+				return msvc.UpdateProfile(numWorkers)
+			},
+		},
+		&cronjob.Config{
+			Name:        "Build Analytic",
+			Description: "Compute the Github's analytic data of users in Malaysia based on the new repos that are scraped daily",
+			Start:       viper.GetBool("crontab_analytic_enable"),
+			CronTab:     viper.GetString("crontab_analytic"),
+			Fn: func() error {
+				var wg sync.WaitGroup
+				wg.Add(8)
+				go func() {
+					msvc.UpdateUserCount()
+					wg.Done()
+				}()
+				go func() {
+					msvc.UpdateRepoCount()
+					wg.Done()
+				}()
+				go func() {
+					msvc.UpdateReposMostRecent(20)
+					wg.Done()
+				}()
+				go func() {
+					msvc.UpdateRepoCountByUser(20)
+					wg.Done()
+				}()
+				go func() {
+					msvc.UpdateReposMostStars(20)
+					wg.Done()
+				}()
+				go func() {
+					msvc.UpdateLanguagesMostPopular(20)
+					wg.Done()
+				}()
+				go func() {
+					msvc.UpdateMostRecentReposByLanguage(20)
+					wg.Done()
+				}()
+				go func() {
+					msvc.UpdateReposByLanguage(20)
+					wg.Done()
+				}()
+				wg.Wait()
+				return nil
+			},
+		},
+	)
 
 	// Setup router
 	r := httprouter.New()
 
 	// Setup profiling
-	r.HandlerFunc(http.MethodGet, "/debug/pprof/", pprof.Index)
-	r.HandlerFunc(http.MethodGet, "/debug/pprof/cmdline", pprof.Cmdline)
-	r.HandlerFunc(http.MethodGet, "/debug/pprof/profile", pprof.Profile)
-	r.HandlerFunc(http.MethodGet, "/debug/pprof/symbol", pprof.Symbol)
-	r.HandlerFunc(http.MethodGet, "/debug/pprof/trace", pprof.Trace)
-	r.Handler(http.MethodGet, "/debug/pprof/goroutine", pprof.Handler("goroutine"))
-	r.Handler(http.MethodGet, "/debug/pprof/heap", pprof.Handler("heap"))
-	r.Handler(http.MethodGet, "/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
-	r.Handler(http.MethodGet, "/debug/pprof/block", pprof.Handler("block"))
+	isProfilerEnabled := true
+	profiler.MakeHTTP(isProfilerEnabled, r)
 
 	// Setup endpoints, can also add feature toggle capabilities
-	usersvc.MakeEndpoints(usvc, r)
-	analyticsvc.MakeEndpoints(asvc, r)
-	reposvc.MakeEndpoints(rsvc, r)
-
-	if viper.GetString("memprofile") != "" {
-		f, err := os.Create(viper.GetString("memprofile"))
-		if err != nil {
-			log.Fatal("could not create memory profile: ", err)
-		}
-		runtime.GC() // get up-to-date statistics
-		if err := rpprof.WriteHeapProfile(f); err != nil {
-			log.Fatal("could not write memory profile: ", err)
-		}
-		f.Close()
-	}
+	usersvc.MakeEndpoints(m.User, r) // A better way? - usvc.Wrap(r), usersvc.Bind(usvc, r)
+	analyticsvc.MakeEndpoints(m.Analytic, r)
+	reposvc.MakeEndpoints(m.Repo, r)
 
 	// Setup server
 	srv := util.NewHTTPServer(viper.GetString("port"), r)
 	// Run our server in a goroutine so that it doesn't block
 
 	go func() {
-		log.Printf("listening to port *%s. press ctrl + c to cancel.\n", viper.GetString("port"))
-		log.Fatal(srv.ListenAndServe())
+		stdlog.Printf("listening to port *%s. press ctrl + c to cancel.\n", viper.GetString("port"))
+		stdlog.Fatal(srv.ListenAndServe())
 	}()
+
+	profiler.MakeMemory(viper.GetString("memprofile"))
 
 	c := make(chan os.Signal, 1)
 
@@ -160,6 +194,6 @@ func main() {
 	// Doesn't block if no connections, but will otherwise wait until the timeout
 	srv.Shutdown(ctx)
 
-	log.Println("shutting down")
+	stdlog.Println("shutting down")
 	os.Exit(0)
 }
