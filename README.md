@@ -1,4 +1,4 @@
-## API Calls
+<!-- ## API Calls
 
 ```bash
 $ curl -H "Authorization: bearer token" -X POST -d " \
@@ -824,7 +824,7 @@ Output:
 		panic(err)
 	}
 	log.Println("change", change)
-```
+``` -->
 
 ## Golang Enum String 
 
@@ -853,4 +853,116 @@ func (e Enum) String() string {
 $ go tool pprof -alloc_space -svg http://localhost:8080/debug/pprof/heap > heap.svg
 
 $ go tool pprof -png http://localhost:8080/debug/pprof/heap > out.png
+```
+
+## Logging
+
+- setting up a logger at init is a no-op (also look at singleton pattern when doing lazy initialization, since lazy initialization is not concurrent-safe)
+- setting logger in context is a bad design pattern - instead, pass the value you want to have in your logger through context
+- logging in concurrent can be tricky - use `requestId` to bind the logs together
+- log the start of a service at `model` layer, but don't log the errors there
+- do not centralize error logging (e.g. placing them in the model), rather handle each error logs separately for better customization
+- instead of passing logger around (preferred), you can replace the global logger (uber's zap) and reuse them - this is slightly preferable for me since I don't have to inject the logger into the dependencies. Imagine having to coordinate multiple service orchestration and passing the `requestId` becomes cumbersome (pass it through context, please), passing a pre-configured logger does not work well.
+- logging lifecycle? start of event, success event, error event
+- standardize the format of your logger
+```
+updating users
+error updating user
+updated user
+
+or
+
+update user, start=true
+update user, error=true
+update user, success=true
+```
+
+## context
+
+- Pass context as the first argument of your `service` methods (not in `store`'s repository pattern). Period.
+- The context utility takes a context, injects the context with request context, and returns the injected context.
+```
+// ContextKey represents the type of the context key
+type ContextKey string
+
+// RequestID represents the request id that is passed in the context
+const RequestID = ContextKey("RequestID")
+
+// WrapContextWithRequestID wraps the existing context with the requestID field before returning them
+func WrapContextWithRequestID(ctx context.Context) context.Context {
+	if v := ctx.Value(RequestID); v != nil {
+		return ctx
+	}
+
+	reqID, err := uuid.NewV4()
+	if err != nil {
+		panic(err)
+	}
+	return context.WithValue(ctx, RequestID, reqID.String())
+}
+```
+- For the above function, why not just create a function that returns a new context with the request id? This is not ideal when you have to accept a context that has other values prepopulated.
+
+## Simplifying list of functions operations
+
+```go
+var wg sync.WaitGroup
+wg.Add(8)
+go func() {
+  msvc.UpdateUserCount()
+  wg.Done()
+}()
+go func() {
+  msvc.UpdateRepoCount()
+  wg.Done()
+}()
+go func() {
+  msvc.UpdateReposMostRecent(20)
+  wg.Done()
+}()
+go func() {
+  msvc.UpdateRepoCountByUser(20)
+  wg.Done()
+}()
+go func() {
+  msvc.UpdateReposMostStars(20)
+  wg.Done()
+}()
+go func() {
+  msvc.UpdateLanguagesMostPopular(20)
+  wg.Done()
+}()
+go func() {
+  msvc.UpdateMostRecentReposByLanguage(20)
+  wg.Done()
+}()
+go func() {
+  msvc.UpdateReposByLanguage(20)
+  wg.Done()
+}()
+wg.Wait()
+return nil
+```
+```go
+nullFns := []null.Fn{
+  null.Fn(func() error { return msvc.UpdateUserCount(ctx) }),
+  null.Fn(func() error { return msvc.UpdateRepoCount(ctx) }),
+  null.Fn(func() error { return msvc.UpdateReposMostRecent(ctx, 20) }),
+  null.Fn(func() error { return msvc.UpdateRepoCountByUser(ctx, 20) }),
+  null.Fn(func() error { return msvc.UpdateReposMostStars(ctx, 20) }),
+  null.Fn(func() error { return msvc.UpdateLanguagesMostPopular(ctx, 20) }),
+  null.Fn(func() error { return msvc.UpdateMostRecentReposByLanguage(ctx, 20) }),
+  null.Fn(func() error { return msvc.UpdateReposByLanguage(ctx, 20) }),
+}
+var wg sync.WaitGroup
+wg.Add(len(nullFns))
+
+for _, fn := range nullFns {
+  go func(f null.Fn) {
+    defer wg.Done()
+    f()
+  }(fn)
+}
+
+wg.Wait()
 ```

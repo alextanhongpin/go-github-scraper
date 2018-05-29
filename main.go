@@ -3,21 +3,23 @@ package main
 import (
 	"context"
 	stdlog "log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"time"
 
-	"github.com/alextanhongpin/go-github-scraper/api/github"
-	"github.com/alextanhongpin/go-github-scraper/internal/app/cronjob"
-	"github.com/alextanhongpin/go-github-scraper/internal/app/mediator"
+	"github.com/alextanhongpin/go-github-scraper/internal/app/analyticsvc"
+	"github.com/alextanhongpin/go-github-scraper/internal/app/mediatorsvc"
+	"github.com/alextanhongpin/go-github-scraper/internal/app/profilesvc"
+	"github.com/alextanhongpin/go-github-scraper/internal/app/reposvc"
+	"github.com/alextanhongpin/go-github-scraper/internal/app/usersvc"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/cronjob"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/null"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/profiler"
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
-	"github.com/alextanhongpin/go-github-scraper/service/analyticsvc"
-	"github.com/alextanhongpin/go-github-scraper/service/profilesvc"
-	"github.com/alextanhongpin/go-github-scraper/service/reposvc"
-	"github.com/alextanhongpin/go-github-scraper/service/usersvc"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/viper"
@@ -34,7 +36,6 @@ func init() {
 	viper.SetDefault("crontab_analytic_enable", false)                     // The enable state of the crontab for analytic
 	viper.SetDefault("db_name", "scraper")                                 // The name of the database
 	viper.SetDefault("db_host", "mongodb://myuser:mypass@localhost:27017") // The URI of the database
-	viper.SetDefault("github_created_at", "2008-04-01")                    // Github's created date, used as default date for scraping
 	viper.SetDefault("github_location", "Malaysia")                        // The default country to scrape data from
 	viper.SetDefault("github_token", "")                                   // The Github's access token used to make call to the GraphQL Endpoint
 	viper.SetDefault("github_uri", "https://api.github.com/graphql")       // The Github's GraphQL Endpoint
@@ -45,36 +46,48 @@ func init() {
 	if viper.GetString("github_token") == "" {
 		panic("github_token environment variable is missing")
 	}
+	// viper.SetDefault("github_created_at", "2008-04-01")                    // Github's created date, used as default date for scraping
 }
 
 func main() {
 	profiler.MakeCPU(viper.GetString("cpuprofile"))
 
+	// Create a default http client that can be reused
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:    20,
+			IdleConnTimeout: time.Second * 5,
+		},
+		Timeout: time.Second * 5,
+	}
+
 	// Setup Logger
-	logger, err := zap.NewProduction()
+	l, err := zap.NewProduction()
 	if err != nil {
 		stdlog.Fatal(err)
 	}
-	defer logger.Sync()
+	defer l.Sync()
+
+	zap.ReplaceGlobals(l)
 
 	// Setup Database
 	db := database.New(viper.GetString("db_host"), viper.GetString("db_name"))
 	defer db.Close()
 
 	// Setup services
-	m := mediator.Mediator{
+	m := mediatorsvc.Mediator{
 		Analytic: analyticsvc.New(db),
-		Github: github.New(util.NewHTTPClient(),
+		Github: github.New(httpClient,
 			viper.GetString("github_token"),
 			viper.GetString("github_uri"),
-			logger),
+			l),
 		Profile: profilesvc.New(db),
-		Repo:    reposvc.New(db, logger),
+		Repo:    reposvc.New(db),
 		User:    usersvc.New(db),
 	}
 
 	// Setup mediator services, which is basically an orchestration of multiple services
-	msvc := mediator.New(m, logger)
+	msvc := mediatorsvc.New(m)
 
 	cronjob.Exec(
 		&cronjob.Config{
@@ -83,9 +96,12 @@ func main() {
 			Start:       false,
 			CronTab:     "* * * * * *",
 			Fn: func() error {
+				ctx := context.Background()
+				ctx = logger.WrapContextWithRequestID(ctx)
+				location := "Malaysia"
 				months := 6
 				perPage := 30
-				return msvc.FetchUsers("Malaysia", months, perPage)
+				return msvc.FetchUsers(ctx, location, months, perPage)
 			},
 		},
 		&cronjob.Config{
@@ -94,9 +110,11 @@ func main() {
 			Start:       false,
 			CronTab:     "* * * * * *",
 			Fn: func() error {
+				ctx := context.Background()
+				ctx = logger.WrapContextWithRequestID(ctx)
 				userPerPage := 30
 				repoPerPage := 30
-				return msvc.FetchRepos(userPerPage, repoPerPage)
+				return msvc.FetchRepos(ctx, userPerPage, repoPerPage)
 			},
 		},
 		&cronjob.Config{
@@ -105,8 +123,10 @@ func main() {
 			Start:       false,
 			CronTab:     "* * * * * *",
 			Fn: func() error {
+				ctx := context.Background()
+				ctx = logger.WrapContextWithRequestID(ctx)
 				numWorkers := 16
-				return msvc.UpdateProfile(numWorkers)
+				return msvc.UpdateProfile(ctx, numWorkers)
 			},
 		},
 		&cronjob.Config{
@@ -115,40 +135,28 @@ func main() {
 			Start:       viper.GetBool("crontab_analytic_enable"),
 			CronTab:     viper.GetString("crontab_analytic"),
 			Fn: func() error {
+				ctx := context.Background()
+				ctx = logger.WrapContextWithRequestID(ctx)
+				nullFns := []null.Fn{
+					null.Fn(func() error { return msvc.UpdateUserCount(ctx) }),
+					null.Fn(func() error { return msvc.UpdateRepoCount(ctx) }),
+					null.Fn(func() error { return msvc.UpdateReposMostRecent(ctx, 20) }),
+					null.Fn(func() error { return msvc.UpdateRepoCountByUser(ctx, 20) }),
+					null.Fn(func() error { return msvc.UpdateReposMostStars(ctx, 20) }),
+					null.Fn(func() error { return msvc.UpdateLanguagesMostPopular(ctx, 20) }),
+					null.Fn(func() error { return msvc.UpdateMostRecentReposByLanguage(ctx, 20) }),
+					null.Fn(func() error { return msvc.UpdateReposByLanguage(ctx, 20) }),
+				}
 				var wg sync.WaitGroup
-				wg.Add(8)
-				go func() {
-					msvc.UpdateUserCount()
-					wg.Done()
-				}()
-				go func() {
-					msvc.UpdateRepoCount()
-					wg.Done()
-				}()
-				go func() {
-					msvc.UpdateReposMostRecent(20)
-					wg.Done()
-				}()
-				go func() {
-					msvc.UpdateRepoCountByUser(20)
-					wg.Done()
-				}()
-				go func() {
-					msvc.UpdateReposMostStars(20)
-					wg.Done()
-				}()
-				go func() {
-					msvc.UpdateLanguagesMostPopular(20)
-					wg.Done()
-				}()
-				go func() {
-					msvc.UpdateMostRecentReposByLanguage(20)
-					wg.Done()
-				}()
-				go func() {
-					msvc.UpdateReposByLanguage(20)
-					wg.Done()
-				}()
+				wg.Add(len(nullFns))
+
+				for _, fn := range nullFns {
+					go func(f null.Fn) {
+						defer wg.Done()
+						f()
+					}(fn)
+				}
+
 				wg.Wait()
 				return nil
 			},
@@ -167,10 +175,17 @@ func main() {
 	analyticsvc.MakeEndpoints(m.Analytic, r)
 	reposvc.MakeEndpoints(m.Repo, r)
 
-	// Setup server
-	srv := util.NewHTTPServer(viper.GetString("port"), r)
-	// Run our server in a goroutine so that it doesn't block
+	// a http.Server with pre-configured timeouts to avoid Slowloris attack
+	srv := &http.Server{
+		Addr:           viper.GetString("port"),
+		Handler:        r,
+		ReadTimeout:    time.Second * 10, // Variable always on the right, not 10 * time.Second
+		WriteTimeout:   time.Second * 10,
+		IdleTimeout:    time.Second * 60,
+		MaxHeaderBytes: 1 << 20,
+	}
 
+	// Run our server in a goroutine so that it doesn't block
 	go func() {
 		stdlog.Printf("listening to port *%s. press ctrl + c to cancel.\n", viper.GetString("port"))
 		stdlog.Fatal(srv.ListenAndServe())
