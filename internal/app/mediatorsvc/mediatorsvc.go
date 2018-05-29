@@ -86,11 +86,6 @@ func (m *model) FetchUsers(ctx context.Context, location string, months int, per
 		zlog.Warn("error upserting users", zap.Error(err))
 		return err
 	}
-
-	zlog.Info("upserted users",
-		zap.String("start", start),
-		zap.String("end", end),
-		zap.Int("count", len(users)))
 	return nil
 }
 
@@ -109,14 +104,8 @@ func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int) er
 			continue
 		}
 
-		start, ok := m.Repo.FindLastCreatedByUser(ctx, login)
+		start, _ := m.Repo.FindLastCreatedByUser(ctx, login)
 		end := moment.NewCurrentFormattedDate()
-
-		zlog.Info("fetch repos since",
-			zap.String("start", start),
-			zap.String("end", end),
-			zap.String("for", login),
-			zap.Bool("default", ok))
 
 		repos, err := m.Github.FetchReposCursor(ctx, login, start, end, repoPerPage)
 		if err != nil {
@@ -129,14 +118,11 @@ func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int) er
 			return err
 		}
 
-		zlog.Info("upserted repos",
-			zap.Int("count", len(repos)),
-			zap.String("start", start),
-			zap.String("end", end),
-			zap.String("for", login))
-
 		if err = m.User.UpdateOne(ctx, login); err != nil {
-			zlog.Warn("error updating users", zap.Error(err))
+			zlog.Warn("UpdateOne",
+				zap.Bool("error", true),
+				zap.String("login", login),
+				zap.Error(err))
 			return err
 		}
 	}

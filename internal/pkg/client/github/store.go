@@ -37,6 +37,7 @@ func (s *store) FetchUsers(req FetchUsersRequest) (*FetchUsersResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	jsonResp, err := graphqlService(s.client, s.token, s.endpoint, jsonBytes)
 	if err != nil {
 		return nil, err

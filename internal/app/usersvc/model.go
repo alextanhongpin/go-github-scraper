@@ -36,13 +36,15 @@ func (m *model) MostRecent(ctx context.Context, limit int) ([]User, error) {
 
 func (m *model) BulkUpsert(ctx context.Context, users []github.User) error {
 	zlog := logger.RequestIDFromContext(ctx)
-	zlog.Info("BulkUpsert users", zap.Int("count", len(users)))
+	zlog.Info("BulkUpsert",
+		zap.Bool("start", true),
+		zap.Int("count", len(users)))
 	return m.store.BulkUpsert(users)
 }
 
 func (m *model) Drop(ctx context.Context) error {
 	zlog := logger.RequestIDFromContext(ctx)
-	zlog.Warn("drop")
+	zlog.Warn("Drop")
 	return m.store.Drop()
 }
 
@@ -70,7 +72,9 @@ func (m *model) Count(ctx context.Context) (int, error) {
 
 func (m *model) UpdateOne(ctx context.Context, login string) error {
 	zlog := logger.RequestIDFromContext(ctx)
-	zlog.Info("update one user", zap.String("for", login))
+	zlog.Info("UpdateOne",
+		zap.Bool("start", true),
+		zap.String("for", login))
 	return m.store.UpdateOne(login)
 }
 
