@@ -1,11 +1,11 @@
-package analyticsvc
+package statsvc
 
 import (
 	"errors"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/moment"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
 
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -78,7 +78,7 @@ func (s *store) PostUserCount(count int) error {
 	defer sess.Close()
 	return upsert(c, EnumUserCount, bson.M{
 		"count":     count,
-		"updatedAt": util.NewUTCDate(),
+		"updatedAt": moment.NewUTCDate(),
 	})
 }
 
@@ -99,7 +99,7 @@ func (s *store) PostRepoCount(count int) error {
 	defer sess.Close()
 	return upsert(c, EnumRepoCount, bson.M{
 		"count":     count,
-		"updatedAt": util.NewUTCDate(),
+		"updatedAt": moment.NewUTCDate(),
 	})
 }
 
@@ -120,7 +120,7 @@ func (s *store) PostReposMostRecent(repos []schema.Repo) error {
 	defer sess.Close()
 	return upsert(c, EnumReposMostRecent, bson.M{
 		"repos":     repos,
-		"updatedAt": util.NewUTCDate(),
+		"updatedAt": moment.NewUTCDate(),
 	})
 }
 
@@ -141,7 +141,7 @@ func (s *store) PostRepoCountByUser(users []schema.UserCount) error {
 	defer sess.Close()
 	return upsert(c, EnumRepoCountByUser, bson.M{
 		"users":     users,
-		"updatedAt": util.NewUTCDate(),
+		"updatedAt": moment.NewUTCDate(),
 	})
 }
 
@@ -162,7 +162,7 @@ func (s *store) PostReposMostStars(repos []schema.Repo) error {
 	defer sess.Close()
 	return upsert(c, EnumReposMostStars, bson.M{
 		"repos":     repos,
-		"updatedAt": util.NewUTCDate(),
+		"updatedAt": moment.NewUTCDate(),
 	})
 }
 
@@ -183,7 +183,7 @@ func (s *store) PostMostPopularLanguage(languages []schema.LanguageCount) error 
 	defer sess.Close()
 	return upsert(c, EnumMostPopularLanguage, bson.M{
 		"languages": languages,
-		"updatedAt": util.NewUTCDate(),
+		"updatedAt": moment.NewUTCDate(),
 	})
 }
 
@@ -204,7 +204,7 @@ func (s *store) PostLanguageCountByUser(languages []schema.LanguageCount) error 
 	defer sess.Close()
 	return upsert(c, EnumLanguageCountByUser, bson.M{
 		"languages": languages,
-		"updatedAt": util.NewUTCDate(),
+		"updatedAt": moment.NewUTCDate(),
 	})
 }
 
@@ -225,7 +225,7 @@ func (s *store) PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error
 	defer sess.Close()
 	return upsert(c, EnumMostRecentReposByLanguage, bson.M{
 		"repos":     repos,
-		"updatedAt": util.NewUTCDate(),
+		"updatedAt": moment.NewUTCDate(),
 	})
 }
 
@@ -246,7 +246,7 @@ func (s *store) PostReposByLanguage(users []schema.UserCountByLanguage) error {
 	defer sess.Close()
 	return upsert(c, EnumReposByLanguage, bson.M{
 		"users":     users,
-		"updatedAt": util.NewUTCDate(),
+		"updatedAt": moment.NewUTCDate(),
 	})
 }
 
@@ -256,7 +256,7 @@ func upsert(c *mgo.Collection, enum string, data bson.M) error {
 		bson.M{
 			"$set": data,
 			"$setOnInsert": bson.M{
-				"createdAt": util.NewUTCDate(),
+				"createdAt": moment.NewUTCDate(),
 			},
 		},
 	); err != nil {

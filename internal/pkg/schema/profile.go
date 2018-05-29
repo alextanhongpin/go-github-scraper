@@ -1,7 +1,7 @@
 package schema
 
 import (
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/moment"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -26,6 +26,6 @@ func (p *Profile) BSON() bson.M {
 		"forks":      p.Forks,
 		"keywords":   p.Keywords,
 		"matches":    p.Matches,
-		"updatedAt":  util.NewUTCDate(),
+		"updatedAt":  moment.NewUTCDate(),
 	}
 }

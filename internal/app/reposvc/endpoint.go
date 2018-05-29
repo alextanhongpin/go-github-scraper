@@ -3,8 +3,7 @@ package reposvc
 import (
 	"net/http"
 
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
-
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/encoder"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -29,6 +28,6 @@ func MakeEndpoints(svc Service, r *httprouter.Router) {
 func (e *endpoints) GetRepoCount() httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		count, err := e.svc.Count(r.Context())
-		util.ResponseJSON(w, GetRepoCountResponse{count}, err)
+		encoder.JSON(w, err, GetRepoCountResponse{count})
 	}
 }

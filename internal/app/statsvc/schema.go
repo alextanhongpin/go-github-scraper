@@ -1,4 +1,4 @@
-package analyticsvc
+package statsvc
 
 import "github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
 

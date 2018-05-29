@@ -24,7 +24,6 @@ func NewModel(store Store, zlog *zap.Logger) API {
 
 func (m *model) FetchUsersCursor(ctx context.Context, location, start, end string, limit int) ([]User, error) {
 	zlog := logger.RequestIDFromContext(ctx)
-
 	zlog.Info("fetching users",
 		zap.String("location", location),
 		zap.String("start", start),

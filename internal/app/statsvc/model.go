@@ -1,4 +1,4 @@
-package analyticsvc
+package statsvc
 
 import (
 	"context"

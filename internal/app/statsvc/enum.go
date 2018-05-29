@@ -1,4 +1,4 @@
-package analyticsvc
+package statsvc
 
 const (
 	EnumUserCount                 = "user_count"

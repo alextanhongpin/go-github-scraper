@@ -1,4 +1,4 @@
-package analyticsvc
+package statsvc
 
 import (
 	"context"
@@ -32,5 +32,5 @@ type Service interface {
 
 // New returns a new analytic service model
 func New(db *database.DB) Service {
-	return NewModel(NewStore(db, database.Analytics))
+	return NewModel(NewStore(db, database.Stats))
 }

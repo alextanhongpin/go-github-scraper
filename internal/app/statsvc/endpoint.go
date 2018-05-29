@@ -1,17 +1,16 @@
-package analyticsvc
+package statsvc
 
 import (
 	"net/http"
 
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
-
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/encoder"
 	"github.com/julienschmidt/httprouter"
 )
 
 // Endpoints represents the services exposed as http routes
 type (
 	Endpoints interface {
-		GetAnalytics() httprouter.Handle
+		GetStats() httprouter.Handle
 	}
 
 	endpoints struct {
@@ -23,10 +22,10 @@ type (
 func MakeEndpoints(svc Service, r *httprouter.Router) {
 	e := &endpoints{svc: svc}
 
-	r.GET("/analytics", e.GetAnalytics())
+	r.GET("/stats", e.GetStats())
 }
 
-func (e *endpoints) GetAnalytics() httprouter.Handle {
+func (e *endpoints) GetStats() httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		ctx := r.Context()
 		var res interface{}
@@ -54,6 +53,6 @@ func (e *endpoints) GetAnalytics() httprouter.Handle {
 			http.Error(w, "query type is missing", http.StatusBadRequest)
 			return
 		}
-		util.ResponseJSON(w, res, err)
+		encoder.JSON(w, err, res)
 	}
 }

@@ -7,14 +7,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alextanhongpin/go-github-scraper/internal/app/analyticsvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/profilesvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/reposvc"
+	"github.com/alextanhongpin/go-github-scraper/internal/app/statsvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/usersvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/moment"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
 
 	"go.uber.org/zap"
 )
@@ -37,7 +37,7 @@ type (
 
 	// Mediator holds the services in used
 	Mediator struct {
-		Analytic analyticsvc.Service
+		Analytic statsvc.Service
 		Github   github.API
 		Profile  profilesvc.Service
 		Repo     reposvc.Service
@@ -110,7 +110,7 @@ func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int) er
 		}
 
 		start, ok := m.Repo.FindLastCreatedByUser(ctx, login)
-		end := util.NewCurrentFormattedDate()
+		end := moment.NewCurrentFormattedDate()
 
 		zlog.Info("fetch repos since",
 			zap.String("start", start),

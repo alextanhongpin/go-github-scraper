@@ -1,6 +1,8 @@
 package database
 
-import mgo "gopkg.in/mgo.v2"
+import (
+	mgo "gopkg.in/mgo.v2"
+)
 
 // DB holds the session to the mongo db
 type DB struct {

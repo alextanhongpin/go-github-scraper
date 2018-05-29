@@ -3,7 +3,7 @@ package usersvc
 import (
 	"net/http"
 
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/encoder"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -37,7 +37,7 @@ func (e *endpoints) GetUserCount() httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		ctx := r.Context()
 		count, err := e.svc.Count(ctx)
-		util.ResponseJSON(w, GetUserCountResponse{count}, err)
+		encoder.JSON(w, err, GetUserCountResponse{count})
 	}
 }
 
@@ -46,6 +46,6 @@ func (e *endpoints) GetUser() httprouter.Handle {
 		ctx := r.Context()
 		login := ps.ByName("login")
 		user, err := e.svc.FindOne(ctx, login)
-		util.ResponseJSON(w, GetUserResponse{user}, err)
+		encoder.JSON(w, err, GetUserResponse{user})
 	}
 }

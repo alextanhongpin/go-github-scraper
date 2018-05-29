@@ -3,7 +3,7 @@ package github
 import (
 	"time"
 
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/moment"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -34,7 +34,7 @@ func (r Repo) BSON() bson.M {
 		"name":          r.Name,
 		"createdAt":     r.CreatedAt.UTC().Format(time.RFC3339),
 		"updatedAt":     r.UpdatedAt.UTC().Format(time.RFC3339),
-		"fetchedAt":     util.NewUTCDate(),
+		"fetchedAt":     moment.NewUTCDate(),
 		"description":   r.Description,
 		"languages":     languages,
 		"homepageUrl":   r.HomepageURL,

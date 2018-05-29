@@ -2,9 +2,9 @@ package profilesvc
 
 import (
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/moment"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/partitioner"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
 
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -62,7 +62,7 @@ func (s *store) UpdateProfile(login string, profile schema.Profile) error {
 	}, bson.M{
 		"$set": profile.BSON(),
 		"$setOnInsert": bson.M{
-			"createdAt": util.NewUTCDate(),
+			"createdAt": moment.NewUTCDate(),
 		},
 	}); err != nil {
 		return err
@@ -88,7 +88,7 @@ func (s *store) BulkUpsert(profiles []schema.Profile) error {
 				bson.M{
 					"$set": profile.BSON(),
 					"$setOnInsert": bson.M{
-						"createdAt": util.NewUTCDate(),
+						"createdAt": moment.NewUTCDate(),
 					},
 				},
 			)

@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alextanhongpin/go-github-scraper/internal/app/analyticsvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/mediatorsvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/profilesvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/reposvc"
+	"github.com/alextanhongpin/go-github-scraper/internal/app/statsvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/usersvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/cronjob"
@@ -46,7 +46,6 @@ func init() {
 	if viper.GetString("github_token") == "" {
 		panic("github_token environment variable is missing")
 	}
-	// viper.SetDefault("github_created_at", "2008-04-01")                    // Github's created date, used as default date for scraping
 }
 
 func main() {
@@ -76,7 +75,7 @@ func main() {
 
 	// Setup services
 	m := mediatorsvc.Mediator{
-		Analytic: analyticsvc.New(db),
+		Analytic: statsvc.New(db),
 		Github: github.New(httpClient,
 			viper.GetString("github_token"),
 			viper.GetString("github_uri"),
@@ -94,7 +93,7 @@ func main() {
 			Name:        "Fetch Users",
 			Description: "Fetch the Github users data periodically based on location and created date, which is stored as delta timestamp",
 			Start:       false,
-			CronTab:     "* * * * * *",
+			CronTab:     "*/20 * * * * *",
 			Fn: func() error {
 				ctx := context.Background()
 				ctx = logger.WrapContextWithRequestID(ctx)
@@ -108,7 +107,7 @@ func main() {
 			Name:        "Fetch Repos",
 			Description: "Fetch the Github user's repos periodically based on the last fetched date",
 			Start:       false,
-			CronTab:     "* * * * * *",
+			CronTab:     "0 * * * * *",
 			Fn: func() error {
 				ctx := context.Background()
 				ctx = logger.WrapContextWithRequestID(ctx)
@@ -138,14 +137,14 @@ func main() {
 				ctx := context.Background()
 				ctx = logger.WrapContextWithRequestID(ctx)
 				nullFns := []null.Fn{
-					null.Fn(func() error { return msvc.UpdateUserCount(ctx) }),
-					null.Fn(func() error { return msvc.UpdateRepoCount(ctx) }),
-					null.Fn(func() error { return msvc.UpdateReposMostRecent(ctx, 20) }),
-					null.Fn(func() error { return msvc.UpdateRepoCountByUser(ctx, 20) }),
-					null.Fn(func() error { return msvc.UpdateReposMostStars(ctx, 20) }),
-					null.Fn(func() error { return msvc.UpdateLanguagesMostPopular(ctx, 20) }),
-					null.Fn(func() error { return msvc.UpdateMostRecentReposByLanguage(ctx, 20) }),
-					null.Fn(func() error { return msvc.UpdateReposByLanguage(ctx, 20) }),
+					func() error { return msvc.UpdateUserCount(ctx) },
+					func() error { return msvc.UpdateRepoCount(ctx) },
+					func() error { return msvc.UpdateReposMostRecent(ctx, 20) },
+					func() error { return msvc.UpdateRepoCountByUser(ctx, 20) },
+					func() error { return msvc.UpdateReposMostStars(ctx, 20) },
+					func() error { return msvc.UpdateLanguagesMostPopular(ctx, 20) },
+					func() error { return msvc.UpdateMostRecentReposByLanguage(ctx, 20) },
+					func() error { return msvc.UpdateReposByLanguage(ctx, 20) },
 				}
 				var wg sync.WaitGroup
 				wg.Add(len(nullFns))
@@ -172,7 +171,7 @@ func main() {
 
 	// Setup endpoints, can also add feature toggle capabilities
 	usersvc.MakeEndpoints(m.User, r) // A better way? - usvc.Wrap(r), usersvc.Bind(usvc, r)
-	analyticsvc.MakeEndpoints(m.Analytic, r)
+	statsvc.MakeEndpoints(m.Analytic, r)
 	reposvc.MakeEndpoints(m.Repo, r)
 
 	// a http.Server with pre-configured timeouts to avoid Slowloris attack

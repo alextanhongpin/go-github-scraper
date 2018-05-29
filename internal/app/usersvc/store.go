@@ -3,8 +3,8 @@ package usersvc
 import (
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/moment"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/partitioner"
-	"github.com/alextanhongpin/go-github-scraper/internal/util"
 
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -16,13 +16,13 @@ type (
 		BulkUpsert(users []github.User) error
 		Count() (int, error)
 		Drop() error
-		Init() error
 		FindOne(login string) (*User, error)
 		FindAll(limit int, sort []string) ([]User, error)
 		FindLastCreated() (*User, error)
+		Init() error
 		PickLogin() ([]string, error)
-		Upsert(github.User) error
 		UpdateOne(login string) error
+		Upsert(github.User) error
 	}
 
 	// store is a struct that holds service configuration
@@ -40,6 +40,7 @@ func NewStore(db *database.DB, collection string) Store {
 	}
 }
 
+// Init performs initialization of the database including setting indices or creating tables
 func (s *store) Init() error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
@@ -181,7 +182,7 @@ func (s *store) UpdateOne(login string) error {
 		"login": login,
 	}, bson.M{
 		"$set": bson.M{
-			"fetchedAt": util.NewUTCDate(),
+			"fetchedAt": moment.NewUTCDate(),
 		},
 	})
 }
