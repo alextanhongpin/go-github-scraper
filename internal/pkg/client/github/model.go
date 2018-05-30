@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
 
@@ -22,19 +23,27 @@ func NewModel(store Store, zlog *zap.Logger) API {
 	}
 }
 
-func (m *model) FetchUsersCursor(ctx context.Context, location, start, end string, limit int) ([]User, error) {
-	zlog := logger.RequestIDFromContext(ctx)
-	zlog.Info("fetching users",
-		zap.String("location", location),
-		zap.String("start", start),
-		zap.String("end", end),
-		zap.Int("limit", limit))
+func (m *model) FetchUsersCursor(ctx context.Context, location, start, end string, limit int) (users []User, err error) {
+	defer func(s time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "FetchUsersCursor"),
+				zap.Duration("took", time.Since(s)),
+				zap.String("location", location),
+				zap.String("start", start),
+				zap.String("end", end),
+				zap.Int("limit", limit))
+		if err != nil {
+			zlog.Warn("error fetching users cursor", zap.Error(err))
+		} else {
+			zlog.Info("fetch users cursor", zap.Int("count", len(users)))
+		}
+	}(time.Now())
 
+	var res *FetchUsersResponse
 	cursor := ""
 	hasNextPage := true
-	var users []User
 	for hasNextPage {
-		res, err := m.store.FetchUsers(FetchUsersRequest{
+		res, err = m.store.FetchUsers(FetchUsersRequest{
 			Location: location,
 			Start:    start,
 			End:      end,
@@ -42,7 +51,6 @@ func (m *model) FetchUsersCursor(ctx context.Context, location, start, end strin
 			Limit:    limit,
 		})
 		if err != nil {
-			zlog.Warn("error fetching users", zap.Error(err))
 			break
 		}
 		hasNextPage = res.Data.Search.PageInfo.HasNextPage
@@ -51,24 +59,30 @@ func (m *model) FetchUsersCursor(ctx context.Context, location, start, end strin
 			users = append(users, edge.Node)
 		}
 	}
-	zlog.Info("fetched users",
-		zap.Int("total", len(users)))
-	return users, nil
+	return
 }
 
-func (m *model) FetchReposCursor(ctx context.Context, login, start, end string, limit int) ([]Repo, error) {
-	zlog := logger.RequestIDFromContext(ctx)
-	zlog.Info("fetching repos",
-		zap.String("login", login),
-		zap.String("start", start),
-		zap.String("end", end),
-		zap.Int("limit", limit))
+func (m *model) FetchReposCursor(ctx context.Context, login, start, end string, limit int) (repos []Repo, err error) {
+	defer func(s time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "FetchReposCursor"),
+				zap.Duration("took", time.Since(s)),
+				zap.String("login", login),
+				zap.String("start", start),
+				zap.String("end", end),
+				zap.Int("limit", limit))
+		if err != nil {
+			zlog.Warn("error fetching repos cursor", zap.Error(err))
+		} else {
+			zlog.Info("fetch repos cursor", zap.Int("count", len(repos)))
+		}
+	}(time.Now())
 
+	var res *FetchReposResponse
 	cursor := ""
 	hasNextPage := true
-	var repos []Repo
 	for hasNextPage {
-		res, err := m.store.FetchRepos(FetchReposRequest{
+		res, err = m.store.FetchRepos(FetchReposRequest{
 			Login:  login,
 			Start:  start,
 			End:    end,
@@ -76,7 +90,6 @@ func (m *model) FetchReposCursor(ctx context.Context, login, start, end string, 
 			Limit:  limit,
 		})
 		if err != nil {
-			zlog.Warn("error fetching repos", zap.Error(err))
 			break
 		}
 		hasNextPage = res.Data.Search.PageInfo.HasNextPage
@@ -85,7 +98,5 @@ func (m *model) FetchReposCursor(ctx context.Context, login, start, end string, 
 			repos = append(repos, edge.Node)
 		}
 	}
-	zlog.Info("fetched repos",
-		zap.Int("total", len(repos)))
-	return repos, nil
+	return
 }
