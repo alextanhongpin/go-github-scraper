@@ -7,6 +7,7 @@ package reposvc
 import (
 	"context"
 
+	"github.com/alextanhongpin/go-github-scraper/internal/app/usersvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
@@ -32,7 +33,7 @@ type Service interface {
 	ForksFor(ctx context.Context, login string) (int64, error)
 	KeywordsFor(ctx context.Context, login string, limit int) ([]schema.Keyword, error)
 	DistinctLogin(ctx context.Context) ([]string, error)
-	GetProfile(ctx context.Context, login string) schema.Profile
+	GetProfile(ctx context.Context, login string) usersvc.User
 }
 
 // New returns a new service with store

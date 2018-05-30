@@ -40,16 +40,30 @@ func (m *model) Init(ctx context.Context) (err error) {
 	return m.store.Init()
 }
 
+func (m *model) GetProfiles(ctx context.Context) (profiles []schema.Profile, err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "GetProfiles"),
+				zap.Duration("took", time.Since(start)))
+		if err != nil {
+			zlog.Warn("error getting profiles", zap.Error(err))
+		} else {
+			zlog.Info("get profiles", zap.Int("count", len(profiles)))
+		}
+	}(time.Now())
+	return m.store.GetProfiles()
+}
+
 func (m *model) GetProfile(ctx context.Context, login string) (p *schema.Profile, err error) {
 	defer func(start time.Time) {
 		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "Init"),
+			With(zap.String("method", "GetProfile"),
 				zap.Duration("took", time.Since(start)),
 				zap.String("login", login))
 		if err != nil {
 			zlog.Warn("error getting profile", zap.Error(err))
 		} else {
-			zlog.Info("got profile")
+			zlog.Info("get profile")
 		}
 	}(time.Now())
 	return m.store.GetProfile(login)

@@ -11,6 +11,8 @@ import (
 // Service represents the model of the user
 type Service interface {
 	BulkUpsert(ctx context.Context, users []github.User) error
+	BulkUpdate(ctx context.Context, users []User) error
+	BulkMatches(ctx context.Context, users []User) error
 	Count(ctx context.Context) (int, error)
 	Drop(ctx context.Context) error
 	FindOne(ctx context.Context, login string) (*User, error)
@@ -20,6 +22,7 @@ type Service interface {
 	Init(ctx context.Context) error
 	UpdateOne(ctx context.Context, login string) error
 	PickLogin(ctx context.Context) ([]string, error)
+	WithRepos(ctx context.Context, count int) ([]User, error)
 }
 
 // New returns a new user service

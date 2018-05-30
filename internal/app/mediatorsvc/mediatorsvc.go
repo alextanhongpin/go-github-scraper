@@ -4,10 +4,11 @@ package mediatorsvc
 
 import (
 	"context"
+	"math"
+	"sort"
 	"sync"
 	"time"
 
-	"github.com/alextanhongpin/go-github-scraper/internal/app/profilesvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/reposvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/statsvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/usersvc"
@@ -33,15 +34,16 @@ type (
 		UpdateMostRecentReposByLanguage(ctx context.Context, perPage int) error
 		UpdateReposByLanguage(ctx context.Context, perPage int) error
 		UpdateProfile(ctx context.Context, numWorkers int) error
+		UpdateMatches(ctx context.Context) error
 	}
 
 	// Mediator holds the services in used
 	Mediator struct {
-		Stat    statsvc.Service
-		Github  github.API
-		Profile profilesvc.Service
-		Repo    reposvc.Service
-		User    usersvc.Service
+		Stat   statsvc.Service
+		Github github.API
+		// Profile profilesvc.Service
+		Repo reposvc.Service
+		User usersvc.Service
 	}
 
 	model struct {
@@ -342,7 +344,7 @@ func (m *model) UpdateMostRecentReposByLanguage(ctx context.Context, perPage int
 
 // UpdateReposByLanguage updates the analytic type `repos_by_language`
 func (m *model) UpdateReposByLanguage(ctx context.Context, perPage int) (err error) {
-	var u []schema.UserCount
+	var user []schema.UserCount
 	var users []schema.UserCountByLanguage
 	var languages []schema.LanguageCount
 
@@ -365,14 +367,14 @@ func (m *model) UpdateReposByLanguage(ctx context.Context, perPage int) (err err
 	}
 
 	for _, lang := range languages {
-		u, err = m.Repo.ReposByLanguage(ctx, lang.Name, perPage)
+		user, err = m.Repo.ReposByLanguage(ctx, lang.Name, perPage)
 		if err != nil {
 			return
 		}
 
 		users = append(users, schema.UserCountByLanguage{
 			Language: lang.Name,
-			Users:    u,
+			Users:    user,
 		})
 	}
 
@@ -385,7 +387,7 @@ func (m *model) UpdateReposByLanguage(ctx context.Context, perPage int) (err err
 
 func (m *model) UpdateProfile(ctx context.Context, numWorkers int) (err error) {
 	var logins []string
-	var profiles []schema.Profile
+	var profiles []usersvc.User
 
 	defer func(start time.Time) {
 		zlog := logger.Wrap(ctx, m.logger).
@@ -401,6 +403,8 @@ func (m *model) UpdateProfile(ctx context.Context, numWorkers int) (err error) {
 				zap.Int("profiles", len(profiles)))
 		}
 	}(time.Now())
+
+	// logins = []string{"alextanhongpin"}
 
 	logins, err = m.Repo.DistinctLogin(ctx)
 	if err != nil {
@@ -422,8 +426,8 @@ func (m *model) UpdateProfile(ctx context.Context, numWorkers int) (err error) {
 		return c
 	}
 
-	fanIn := func(ctx context.Context, numWorkers int, in <-chan string) <-chan schema.Profile {
-		c := make(chan schema.Profile)
+	fanIn := func(ctx context.Context, numWorkers int, in <-chan string) <-chan usersvc.User {
+		c := make(chan usersvc.User)
 
 		var wg sync.WaitGroup
 		wg.Add(numWorkers)
@@ -458,9 +462,120 @@ func (m *model) UpdateProfile(ctx context.Context, numWorkers int) (err error) {
 		profiles = append(profiles, p)
 	}
 
-	if err = m.Profile.BulkUpsert(ctx, profiles); err != nil {
+	if err = m.User.BulkUpdate(ctx, profiles); err != nil {
 		return
 	}
 
 	return
+}
+
+func (m *model) UpdateMatches(ctx context.Context) (err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "UpdateMatches"),
+				zap.Duration("took", time.Since(start)))
+
+		if err != nil {
+			zlog.Warn("error updating matches", zap.Error(err))
+		} else {
+			zlog.Info("update matches")
+		}
+	}(time.Now())
+	var users []usersvc.User
+	var res []usersvc.User
+	users, err = m.User.WithRepos(ctx, 0)
+
+	for i, p1 := range users {
+		var matches []schema.User
+		for j, p2 := range users {
+			if i != j {
+				matches = append(matches, schema.User{
+					Login:     p2.Login,
+					AvatarURL: p2.AvatarURL,
+					Score:     recsys(p1, p2),
+				})
+			}
+		}
+		sort.SliceStable(matches, func(i, j int) bool {
+			return matches[i].Score > matches[j].Score
+		})
+		res = append(res, usersvc.User{
+			Login:   p1.Login,
+			Profile: schema.Profile{Matches: matches[:take(20, len(matches))]}})
+	}
+
+	if err = m.User.BulkMatches(ctx, res); err != nil {
+		return
+	}
+
+	return
+}
+
+func take(curr, max int) int {
+	if curr < max {
+		return curr
+	}
+	return max
+}
+
+func square(a, b int64) float64 {
+	return math.Pow(float64(a-b), 2.0)
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func recsys(user1, user2 usersvc.User) (score float64) {
+	sumSquares := square(user1.Repositories, user2.Repositories) +
+		square(user1.Gists, user2.Gists) +
+		square(user1.Followers, user2.Followers) +
+		square(user1.Following, user2.Following) +
+		square(user1.Profile.Watchers, user2.Profile.Watchers) +
+		square(user1.Profile.Stargazers, user2.Profile.Stargazers) +
+		square(user1.Profile.Forks, user2.Profile.Forks)
+
+	mapAllLang := make(map[string]int64)
+	mapLangUser1 := make(map[string]int64)
+	mapLangUser2 := make(map[string]int64)
+
+	for _, l := range user1.Languages {
+		mapAllLang[l.Name]++
+		mapLangUser1[l.Name] = int64(l.Count)
+	}
+
+	for _, l := range user2.Languages {
+		mapAllLang[l.Name]++
+		mapLangUser2[l.Name] = int64(l.Count)
+	}
+
+	for k, v := range mapAllLang {
+		if v == 2 {
+			sumSquares += square(mapLangUser1[k], mapLangUser2[k])
+		}
+	}
+
+	mapKeywords := make(map[string]int64)
+	mapKeywordUser1 := make(map[string]int64)
+	mapKeywordUser2 := make(map[string]int64)
+
+	for _, k := range user1.Keywords {
+		mapKeywords[k.ID]++
+		mapKeywordUser1[k.ID]++
+	}
+
+	for _, k := range user2.Languages {
+		mapKeywords[k.Name]++
+		mapKeywordUser2[k.Name]++
+	}
+
+	for k, v := range mapKeywords {
+		if v == 2 {
+			sumSquares += square(mapKeywordUser1[k], mapKeywordUser2[k])
+		}
+	}
+	return 1 / (1 + math.Sqrt(sumSquares))
 }

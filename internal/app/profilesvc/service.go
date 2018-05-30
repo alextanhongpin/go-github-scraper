@@ -11,6 +11,7 @@ import (
 // Service represents the interface for the profile service
 type Service interface {
 	Init(ctx context.Context) error
+	GetProfiles(ctx context.Context) ([]schema.Profile, error)
 	GetProfile(ctx context.Context, login string) (*schema.Profile, error)
 	UpdateProfile(ctx context.Context, login string, profile schema.Profile) error
 	BulkUpsert(ctx context.Context, profiles []schema.Profile) error

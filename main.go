@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/app/mediatorsvc"
-	"github.com/alextanhongpin/go-github-scraper/internal/app/profilesvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/reposvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/statsvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/usersvc"
@@ -27,14 +26,21 @@ import (
 
 func init() {
 	viper.AutomaticEnv()
-	viper.SetDefault("crontab_user", "*/20 * * * * *")               // The crontab for user, running every 20 seconds
-	viper.SetDefault("crontab_repo", "0 * * * * *")                  // The crontab for repo, running every minute
-	viper.SetDefault("crontab_stat", "@daily")                       // The crontab for stat, running daily
-	viper.SetDefault("crontab_profile", "@daily")                    // The crontab for profile, running daily
+	viper.SetDefault("crontab_user_tab", "*/20 * * * * *")           // The crontab for user, running every 20 seconds
+	viper.SetDefault("crontab_repo_tab", "0 * * * * *")              // The crontab for repo, running every minute
+	viper.SetDefault("crontab_stat_tab", "@daily")                   // The crontab for stat, running daily
+	viper.SetDefault("crontab_profile_tab", "@daily")                // The crontab for profile, running daily
+	viper.SetDefault("crontab_match_tab", "@daily")                  // The crontab for matching, running daily
 	viper.SetDefault("crontab_user_enable", false)                   // The enable state of the crontab for user
 	viper.SetDefault("crontab_repo_enable", false)                   // The enable state of the crontab for repo
 	viper.SetDefault("crontab_stat_enable", false)                   // The enable state of the crontab for stat
 	viper.SetDefault("crontab_profile_enable", false)                // The enable state of the crontab for profile
+	viper.SetDefault("crontab_match_enable", false)                  // The enable state of the crontab for profile
+	viper.SetDefault("crontab_user_trigger", false)                  // Will run once if set to true
+	viper.SetDefault("crontab_repo_trigger", false)                  // Will run once if set to true
+	viper.SetDefault("crontab_stat_trigger", false)                  // Will run once if set to true
+	viper.SetDefault("crontab_profile_trigger", false)               // Will run once if set to true
+	viper.SetDefault("crontab_match_trigger", false)                 // Will run once if set to true
 	viper.SetDefault("db_user", "root")                              // The username of the database
 	viper.SetDefault("db_pass", "example")                           // The password of the database
 	viper.SetDefault("db_name", "scraper")                           // The name of the database
@@ -54,6 +60,9 @@ func init() {
 }
 
 func main() {
+	// Create global context for cancellation
+	ctx := context.Background()
+
 	// Setup cpu profiler
 	profiler.MakeCPU(viper.GetString("cpuprofile"))
 
@@ -86,23 +95,23 @@ func main() {
 			viper.GetString("github_token"),
 			viper.GetString("github_uri"),
 			l),
-		Profile: profilesvc.New(db, l.Named("profilesvc")),
-		Repo:    reposvc.New(db, l.Named("reposvc")),
-		User:    usersvc.New(db, l.Named("usersvc")),
+		// Profile: profilesvc.New(db, l.Named("profilesvc")),
+		Repo: reposvc.New(db, l.Named("reposvc")),
+		User: usersvc.New(db, l.Named("usersvc")),
 	}
 
 	// Setup mediator services, which is basically an orchestration of multiple services
 	msvc := mediatorsvc.New(m, l.Named("mediatorsvc"))
 
 	// Setup cronjob
-	cronjob.Exec(
+	cronjob.Exec(ctx,
 		&cronjob.Config{
 			Name:        "Fetch Users",
 			Description: "Fetch the Github users data periodically based on location and created date, which is stored as delta timestamp",
 			Start:       viper.GetBool("crontab_user_enable"),
-			CronTab:     viper.GetString("crontab_user"),
-			Fn: func() error {
-				ctx := context.Background()
+			CronTab:     viper.GetString("crontab_user_tab"),
+			Trigger:     viper.GetBool("crontab_user_trigger"),
+			Fn: func(ctx context.Context) error {
 				ctx = logger.WrapContextWithRequestID(ctx)
 				location := "Malaysia"
 				months := 6
@@ -114,9 +123,9 @@ func main() {
 			Name:        "Fetch Repos",
 			Description: "Fetch the Github user's repos periodically based on the last fetched date",
 			Start:       viper.GetBool("crontab_repo_enable"),
-			CronTab:     viper.GetString("crontab_repo"),
-			Fn: func() error {
-				ctx := context.Background()
+			CronTab:     viper.GetString("crontab_repo_tab"),
+			Trigger:     viper.GetBool("crontab_repo_trigger"),
+			Fn: func(ctx context.Context) error {
 				ctx = logger.WrapContextWithRequestID(ctx)
 				userPerPage := 30
 				repoPerPage := 30
@@ -127,11 +136,11 @@ func main() {
 			Name:        "Update Profile",
 			Description: "Compute the new user profile based on the repos that are scraped daily",
 			Start:       viper.GetBool("crontab_profile_enable"),
-			CronTab:     viper.GetString("crontab_profile"),
-			Fn: func() error {
-				ctx := context.Background()
+			CronTab:     viper.GetString("crontab_profile_tab"),
+			Trigger:     viper.GetBool("crontab_profile_trigger"),
+			Fn: func(ctx context.Context) error {
 				ctx = logger.WrapContextWithRequestID(ctx)
-				numWorkers := 16
+				numWorkers := 4
 				return msvc.UpdateProfile(ctx, numWorkers)
 			},
 		},
@@ -139,9 +148,9 @@ func main() {
 			Name:        "Build Stats",
 			Description: "Compute the Github's analytic data of users in Malaysia based on the new repos that are scraped daily",
 			Start:       viper.GetBool("crontab_stat_enable"),
-			CronTab:     viper.GetString("crontab_stat"),
-			Fn: func() error {
-				ctx := context.Background()
+			CronTab:     viper.GetString("crontab_stat_tab"),
+			Trigger:     viper.GetBool("crontab_stat_trigger"),
+			Fn: func(ctx context.Context) error {
 				ctx = logger.WrapContextWithRequestID(ctx)
 				defaultLimit := 20
 
@@ -169,6 +178,17 @@ func main() {
 				return nil
 			},
 		},
+		&cronjob.Config{
+			Name:        "Update Matches",
+			Description: "Compute the new user recommendations based on the new repos pulled",
+			Start:       viper.GetBool("crontab_match_enable"),
+			CronTab:     viper.GetString("crontab_match_tab"),
+			Trigger:     viper.GetBool("crontab_match_trigger"),
+			Fn: func(ctx context.Context) error {
+				ctx = logger.WrapContextWithRequestID(ctx)
+				return msvc.UpdateMatches(ctx)
+			},
+		},
 	)
 
 	// Setup router
@@ -181,6 +201,7 @@ func main() {
 	usersvc.MakeEndpoints(m.User, r) // A better way? - usvc.Wrap(r), usersvc.Bind(usvc, r)
 	statsvc.MakeEndpoints(m.Stat, r)
 	reposvc.MakeEndpoints(m.Repo, r)
+	// profilesvc.MakeEndpoints(m.Profile, r)
 
 	// a http.Server with pre-configured timeouts to avoid Slowloris attack
 	srv := &http.Server{
@@ -211,7 +232,7 @@ func main() {
 	<-c
 
 	// Create a deadline to wait for.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*viper.GetDuration("graceful_timeout"))
+	ctx, cancel := context.WithTimeout(ctx, time.Second*viper.GetDuration("graceful_timeout"))
 	defer cancel()
 
 	// Doesn't block if no connections, but will otherwise wait until the timeout

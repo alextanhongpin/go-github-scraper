@@ -1073,3 +1073,12 @@ func main() {
 
 			w.Write([]byte("Processed\n"))
 		}) -->
+
+## Useful tools
+
+```bash
+$ go get github.com/3rf/codecoroner
+$ codecoroner funcs ./...
+$ codecoroner idents ./...
+```
+

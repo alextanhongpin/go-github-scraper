@@ -69,6 +69,36 @@ func (m *model) BulkUpsert(ctx context.Context, users []github.User) (err error)
 	return m.store.BulkUpsert(users)
 }
 
+func (m *model) BulkUpdate(ctx context.Context, users []User) (err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "BulkUpdate"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("count", len(users)))
+		if err != nil {
+			zlog.Warn("error updating user bulk", zap.Error(err))
+		} else {
+			zlog.Info("update user bulk")
+		}
+	}(time.Now())
+	return m.store.BulkUpdate(users)
+}
+
+func (m *model) BulkMatches(ctx context.Context, users []User) (err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "BulkMatches"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("count", len(users)))
+		if err != nil {
+			zlog.Warn("error updating matches bulk", zap.Error(err))
+		} else {
+			zlog.Info("update matches bulk")
+		}
+	}(time.Now())
+	return m.store.BulkMatches(users)
+}
+
 func (m *model) Drop(ctx context.Context) (err error) {
 	defer func(start time.Time) {
 		zlog := logger.Wrap(ctx, m.logger).
@@ -176,4 +206,19 @@ func (m *model) PickLogin(ctx context.Context) (logins []string, err error) {
 		}
 	}(time.Now())
 	return m.store.PickLogin()
+}
+
+func (m *model) WithRepos(ctx context.Context, count int) (users []User, err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "WithRepos"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("greaterThan", count))
+		if err != nil {
+			zlog.Warn("error getting users with repos", zap.Error(err))
+		} else {
+			zlog.Info("get users with repos greater than", zap.Int("count", len(users)))
+		}
+	}(time.Now())
+	return m.store.WithRepos(count)
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/alextanhongpin/go-github-scraper/internal/app/usersvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/constant"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
@@ -300,7 +301,7 @@ func (m *model) DistinctLogin(ctx context.Context) (res []string, err error) {
 	return m.store.DistinctLogin()
 }
 
-func (m *model) GetProfile(ctx context.Context, login string) (p schema.Profile) {
+func (m *model) GetProfile(ctx context.Context, login string) (p usersvc.User) {
 	var watchers, stargazers, forks int64
 	var keywords []schema.Keyword
 	var languages []schema.LanguageCount
@@ -314,37 +315,45 @@ func (m *model) GetProfile(ctx context.Context, login string) (p schema.Profile)
 			zap.Int64("stargazers", stargazers),
 			zap.Int64("forks", forks),
 			zap.Int("keywords", len(keywords)),
+			zap.Int("languages", len(languages)),
 			zap.Error(err))
 	}(time.Now())
 
-	watchers, err = m.store.WatchersFor(login)
-	if err != nil {
-		zlog.Warn("error getting watcher count", zap.Error(err))
-	}
-	stargazers, err = m.store.StargazersFor(login)
-	if err != nil {
-		zlog.Warn("error getting stargazer count", zap.Error(err))
-	}
-	forks, err = m.store.ForksFor(login)
-	if err != nil {
-		zlog.Warn("error getting fork count", zap.Error(err))
-	}
-	keywords, err = m.store.KeywordsFor(login, 20)
-	if err != nil {
-		zlog.Warn("error getting keyword count", zap.Error(err))
-	}
+	ch := make(chan usersvc.User, 1)
 
-	languages, err = m.store.AggregateLanguageByUser(login, 20)
-	if err != nil {
-		zlog.Warn("error fetching language count repos", zap.Error(err))
-	}
+	go func() {
+		watchers, err = m.store.WatchersFor(login)
+		if err != nil {
+			zlog.Warn("error getting watcher count", zap.Error(err))
+		}
 
-	return schema.Profile{
-		Login:      login,
-		Watchers:   watchers,
-		Stargazers: stargazers,
-		Forks:      forks,
-		Keywords:   keywords,
-		Languages:  languages,
-	}
+		stargazers, err = m.store.StargazersFor(login)
+		if err != nil {
+			zlog.Warn("error getting stargazer count", zap.Error(err))
+		}
+
+		forks, err = m.store.ForksFor(login)
+		if err != nil {
+			zlog.Warn("error getting fork count", zap.Error(err))
+		}
+		keywords, err = m.store.KeywordsFor(login, 20)
+		if err != nil {
+			zlog.Warn("error getting keyword count", zap.Error(err))
+		}
+		languages, err = m.store.AggregateLanguageByUser(login, 20)
+		if err != nil {
+			zlog.Warn("error fetching language count repos", zap.Error(err))
+		}
+		ch <- usersvc.User{
+			Login: login,
+			Profile: schema.Profile{
+				Watchers:   watchers,
+				Stargazers: stargazers,
+				Forks:      forks,
+				Keywords:   keywords,
+				Languages:  languages,
+			}}
+	}()
+	p = <-ch
+	return
 }

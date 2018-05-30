@@ -1,11 +1,15 @@
 package cronjob
 
-import "github.com/robfig/cron"
+import (
+	"context"
+
+	"github.com/robfig/cron"
+)
 
 type (
 	// CronJob exposes the interface
 	CronJob interface {
-		Do()
+		Do(ctx context.Context)
 	}
 
 	// Config represents the cronjob config
@@ -14,25 +18,31 @@ type (
 		Description string
 		Start       bool
 		CronTab     string
-		Fn          func() error
+		Trigger     bool
+		Fn          func(ctx context.Context) error
 	}
 )
 
 // Do will create a new cron job with the provided configuration
-func (cfg *Config) Do() {
+func (cfg *Config) Do(ctx context.Context) {
+
+	if cfg.Trigger {
+		go cfg.Fn(ctx)
+	}
+
 	if !cfg.Start {
 		return
 	}
 	c := cron.New()
 	c.AddFunc(cfg.CronTab, func() {
-		cfg.Fn()
+		cfg.Fn(ctx)
 	})
 	c.Start()
 }
 
 // Exec runs a list of cronjobs
-func Exec(jobs ...CronJob) {
+func Exec(ctx context.Context, jobs ...CronJob) {
 	for _, j := range jobs {
-		j.Do()
+		j.Do(ctx)
 	}
 }

@@ -3,7 +3,6 @@ package profilesvc
 import (
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/moment"
-	"github.com/alextanhongpin/go-github-scraper/internal/pkg/partitioner"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
 
 	mgo "gopkg.in/mgo.v2"
@@ -14,6 +13,7 @@ type (
 	// Store represents the methods that the store expose
 	Store interface {
 		Init() error
+		GetProfiles() ([]schema.Profile, error)
 		GetProfile(login string) (*schema.Profile, error)
 		UpdateProfile(login string, profile schema.Profile) error
 		BulkUpsert(profiles []schema.Profile) error
@@ -41,6 +41,16 @@ func (s *store) Init() error {
 		Key:    []string{"login"},
 		Unique: true,
 	})
+}
+
+func (s *store) GetProfiles() ([]schema.Profile, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var profiles []schema.Profile
+	if err := c.Find(nil).All(&profiles); err != nil {
+		return nil, err
+	}
+	return profiles, nil
 }
 
 func (s *store) GetProfile(login string) (*schema.Profile, error) {
@@ -72,32 +82,32 @@ func (s *store) UpdateProfile(login string, profile schema.Profile) error {
 }
 
 func (s *store) BulkUpsert(profiles []schema.Profile) error {
-	sess, c := s.db.Collection(s.collection)
-	defer sess.Close()
+	// sess, c := s.db.Collection(s.collection)
+	// defer sess.Close()
 
-	// Mongo can only process a max of 1000 items
-	perBulk := 500
-	partitions, bucket := partitioner.New(perBulk, len(profiles))
+	// // Mongo can only process a max of 1000 items
+	// perBulk := 500
+	// partitions, bucket := partitioner.New(perBulk, len(profiles))
 
-	for i := 0; i < bucket; i++ {
-		p := partitions[i]
+	// for i := 0; i < bucket; i++ {
+	// 	p := partitions[i]
 
-		bulk := c.Bulk()
-		for _, profile := range profiles[p.Start:p.End] {
-			bulk.Upsert(
-				bson.M{"login": profile.Login},
-				bson.M{
-					"$set": profile.BSON(),
-					"$setOnInsert": bson.M{
-						"createdAt": moment.NewUTCDate(),
-					},
-				},
-			)
-		}
-		if _, err := bulk.Run(); err != nil {
-			return err
-		}
-	}
+	// 	bulk := c.Bulk()
+	// 	for _, profile := range profiles[p.Start:p.End] {
+	// 		bulk.Upsert(
+	// 			bson.M{"login": profile.Login},
+	// 			bson.M{
+	// 				"$set": profile.BSON(),
+	// 				"$setOnInsert": bson.M{
+	// 					"createdAt": moment.NewUTCDate(),
+	// 				},
+	// 			},
+	// 		)
+	// 	}
+	// 	if _, err := bulk.Run(); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 }
