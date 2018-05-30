@@ -23,7 +23,6 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 func init() {
@@ -65,12 +64,8 @@ func main() {
 	}
 
 	// Setup logger
-	l, err := zap.NewProduction()
-	if err != nil {
-		stdlog.Fatal(err)
-	}
+	l := logger.New()
 	defer l.Sync()
-	zap.ReplaceGlobals(l)
 
 	// Setup database
 	db := database.New(viper.GetString("db_host"), viper.GetString("db_name"))
