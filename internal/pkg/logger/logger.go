@@ -10,6 +10,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// Logger represents a type alias for the logger
+type Logger = zap.Logger
+
 // ContextKey represents the type of the context key
 type ContextKey string
 
@@ -21,19 +24,16 @@ func WrapContextWithRequestID(ctx context.Context) context.Context {
 	if v := ctx.Value(RequestID); v != nil {
 		return ctx
 	}
-	reqID := xid.New()
-	return context.WithValue(ctx, RequestID, reqID.String())
+	return context.WithValue(ctx, RequestID, xid.New().String())
 }
 
-// RequestIDFromContext returns a global zap logger with the injected fields
-func RequestIDFromContext(ctx context.Context) *zap.Logger {
+// Wrap takes a context and existing logger and returns the logger with the injected correlation request id
+func Wrap(ctx context.Context, l *Logger) *Logger {
 	if v := ctx.Value(RequestID); v != nil {
-		return zap.L().With(zap.String("requestId", v.(string)))
+		return l.With(zap.String("requestId", v.(string)))
 	}
-	return zap.L()
+	return l
 }
-
-type Logger = zap.Logger
 
 // New returns a new logger
 func New() *Logger {

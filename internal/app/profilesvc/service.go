@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
 )
 
@@ -16,6 +17,6 @@ type Service interface {
 }
 
 // New returns a new profile service
-func New(db *database.DB) Service {
-	return NewModel(NewStore(db, database.Profiles))
+func New(db *database.DB, l *logger.Logger) Service {
+	return NewModel(NewStore(db, database.Profiles), l)
 }

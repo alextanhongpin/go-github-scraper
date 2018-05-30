@@ -12,12 +12,13 @@ import (
 )
 
 type model struct {
-	store Store
+	store  Store
+	logger *logger.Logger
 }
 
 // NewModel returns a new model with the store
-func NewModel(store Store) Service {
-	m := model{store: store}
+func NewModel(store Store, l *logger.Logger) Service {
+	m := model{store: store, logger: l}
 	if err := m.Init(context.Background()); err != nil {
 		log.Fatal(err)
 	}
@@ -26,7 +27,7 @@ func NewModel(store Store) Service {
 
 func (m *model) Init(ctx context.Context) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "Init"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -40,7 +41,7 @@ func (m *model) Init(ctx context.Context) (err error) {
 
 func (m *model) MostRecent(ctx context.Context, limit int) (users []User, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "MostRecent"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("limit", limit))
@@ -55,7 +56,7 @@ func (m *model) MostRecent(ctx context.Context, limit int) (users []User, err er
 
 func (m *model) BulkUpsert(ctx context.Context, users []github.User) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "BulkUpsert"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("count", len(users)))
@@ -70,7 +71,7 @@ func (m *model) BulkUpsert(ctx context.Context, users []github.User) (err error)
 
 func (m *model) Drop(ctx context.Context) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "Drop"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -86,7 +87,7 @@ func (m *model) Drop(ctx context.Context) (err error) {
 // if the value returned exists or is default
 func (m *model) FindLastCreated(ctx context.Context) (lastCreated string, ok bool) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "FindLastCreated"),
 				zap.Duration("took", time.Since(start)))
 		zlog.Info("find last created",
@@ -106,7 +107,7 @@ func (m *model) FindLastCreated(ctx context.Context) (lastCreated string, ok boo
 
 func (m *model) FindLastFetched(ctx context.Context, limit int) (res []User, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "FindLastFetched"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("limit", limit))
@@ -121,7 +122,7 @@ func (m *model) FindLastFetched(ctx context.Context, limit int) (res []User, err
 
 func (m *model) Count(ctx context.Context) (count int, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "Count"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -135,7 +136,7 @@ func (m *model) Count(ctx context.Context) (count int, err error) {
 
 func (m *model) UpdateOne(ctx context.Context, login string) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "UpdateOne"),
 				zap.Duration("took", time.Since(start)),
 				zap.String("login", login))
@@ -150,7 +151,7 @@ func (m *model) UpdateOne(ctx context.Context, login string) (err error) {
 
 func (m *model) FindOne(ctx context.Context, login string) (res *User, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "FindOne"),
 				zap.Duration("took", time.Since(start)),
 				zap.String("login", login))
@@ -165,7 +166,7 @@ func (m *model) FindOne(ctx context.Context, login string) (res *User, err error
 
 func (m *model) PickLogin(ctx context.Context) (logins []string, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "PickLogin"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {

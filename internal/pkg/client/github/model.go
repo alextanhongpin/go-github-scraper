@@ -11,21 +11,21 @@ import (
 
 // Model represents the api interface for the Github's GraphQL
 type model struct {
-	store Store
-	zlog  *zap.Logger
+	store  Store
+	logger *logger.Logger
 }
 
 // NewModel returns a new model
-func NewModel(store Store, zlog *zap.Logger) API {
+func NewModel(store Store, l *logger.Logger) API {
 	return &model{
-		store: store,
-		zlog:  zlog,
+		store:  store,
+		logger: l,
 	}
 }
 
 func (m *model) FetchUsersCursor(ctx context.Context, location, start, end string, limit int) (users []User, err error) {
 	defer func(s time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "FetchUsersCursor"),
 				zap.Duration("took", time.Since(s)),
 				zap.String("location", location),
@@ -64,7 +64,7 @@ func (m *model) FetchUsersCursor(ctx context.Context, location, start, end strin
 
 func (m *model) FetchReposCursor(ctx context.Context, login, start, end string, limit int) (repos []Repo, err error) {
 	defer func(s time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "FetchReposCursor"),
 				zap.Duration("took", time.Since(s)),
 				zap.String("login", login),

@@ -73,18 +73,18 @@ func main() {
 
 	// Setup services
 	m := mediatorsvc.Mediator{
-		Analytic: statsvc.New(db),
+		Stat: statsvc.New(db, l.Named("statsvc")),
 		Github: github.New(httpClient,
 			viper.GetString("github_token"),
 			viper.GetString("github_uri"),
 			l),
-		Profile: profilesvc.New(db),
-		Repo:    reposvc.New(db),
-		User:    usersvc.New(db),
+		Profile: profilesvc.New(db, l.Named("profilesvc")),
+		Repo:    reposvc.New(db, l.Named("reposvc")),
+		User:    usersvc.New(db, l.Named("usersvc")),
 	}
 
 	// Setup mediator services, which is basically an orchestration of multiple services
-	msvc := mediatorsvc.New(m)
+	msvc := mediatorsvc.New(m, l.Named("mediatorsvc"))
 
 	// Setup cronjob
 	cronjob.Exec(
@@ -169,7 +169,7 @@ func main() {
 
 	// Setup endpoints, can also add feature toggle capabilities
 	usersvc.MakeEndpoints(m.User, r) // A better way? - usvc.Wrap(r), usersvc.Bind(usvc, r)
-	statsvc.MakeEndpoints(m.Analytic, r)
+	statsvc.MakeEndpoints(m.Stat, r)
 	reposvc.MakeEndpoints(m.Repo, r)
 
 	// a http.Server with pre-configured timeouts to avoid Slowloris attack

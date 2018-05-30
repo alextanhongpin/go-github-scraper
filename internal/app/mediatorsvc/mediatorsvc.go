@@ -37,23 +37,22 @@ type (
 
 	// Mediator holds the services in used
 	Mediator struct {
-		Analytic statsvc.Service
-		Github   github.API
-		Profile  profilesvc.Service
-		Repo     reposvc.Service
-		User     usersvc.Service
+		Stat    statsvc.Service
+		Github  github.API
+		Profile profilesvc.Service
+		Repo    reposvc.Service
+		User    usersvc.Service
 	}
 
 	model struct {
 		Mediator
+		logger *logger.Logger
 	}
 )
 
 // New returns a new mediator service
-func New(m Mediator) Service {
-	return &model{
-		m,
-	}
+func New(m Mediator, l *logger.Logger) Service {
+	return &model{m, l}
 }
 
 // makeEndDate sets the end date n months away to max present day
@@ -74,7 +73,7 @@ func (m *model) FetchUsers(ctx context.Context, location string, months int, per
 	var start, end string
 
 	defer func(s time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "FetchUsers"),
 				zap.Duration("took", time.Since(s)),
 				zap.String("location", location),
@@ -105,7 +104,7 @@ func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int) (e
 	var users []usersvc.User
 	var repos []github.Repo
 	defer func(s time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "FetchRepos"),
 				zap.Duration("took", time.Since(s)),
 				zap.Int("userPerPage", userPerPage),
@@ -153,7 +152,7 @@ func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int) (e
 func (m *model) UpdateUserCount(ctx context.Context) (err error) {
 	var count int
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "UpdateUserCount"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -168,7 +167,7 @@ func (m *model) UpdateUserCount(ctx context.Context) (err error) {
 		return
 	}
 
-	if err = m.Analytic.PostUserCount(ctx, count); err != nil {
+	if err = m.Stat.PostUserCount(ctx, count); err != nil {
 		return
 	}
 	return
@@ -178,7 +177,7 @@ func (m *model) UpdateUserCount(ctx context.Context) (err error) {
 func (m *model) UpdateRepoCount(ctx context.Context) (err error) {
 	var count int
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "UpdateRepoCount"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -192,7 +191,7 @@ func (m *model) UpdateRepoCount(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	if err = m.Analytic.PostRepoCount(ctx, count); err != nil {
+	if err = m.Stat.PostRepoCount(ctx, count); err != nil {
 		return err
 	}
 	return
@@ -202,7 +201,7 @@ func (m *model) UpdateRepoCount(ctx context.Context) (err error) {
 func (m *model) UpdateReposMostRecent(ctx context.Context, perPage int) (err error) {
 	var repos []schema.Repo
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "UpdateReposMostRecent"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -217,7 +216,7 @@ func (m *model) UpdateReposMostRecent(ctx context.Context, perPage int) (err err
 		return
 	}
 
-	if err = m.Analytic.PostReposMostRecent(ctx, repos); err != nil {
+	if err = m.Stat.PostReposMostRecent(ctx, repos); err != nil {
 		return
 	}
 	return
@@ -227,7 +226,7 @@ func (m *model) UpdateReposMostRecent(ctx context.Context, perPage int) (err err
 func (m *model) UpdateRepoCountByUser(ctx context.Context, perPage int) (err error) {
 	var users []schema.UserCount
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "UpdateRepoCountByUser"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("perPage", perPage))
@@ -243,7 +242,7 @@ func (m *model) UpdateRepoCountByUser(ctx context.Context, perPage int) (err err
 		return
 	}
 
-	if err = m.Analytic.PostRepoCountByUser(ctx, users); err != nil {
+	if err = m.Stat.PostRepoCountByUser(ctx, users); err != nil {
 		return
 	}
 	return
@@ -253,7 +252,7 @@ func (m *model) UpdateRepoCountByUser(ctx context.Context, perPage int) (err err
 func (m *model) UpdateReposMostStars(ctx context.Context, perPage int) (err error) {
 	var repos []schema.Repo
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "UpdateReposMostStars"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("perPage", perPage))
@@ -269,7 +268,7 @@ func (m *model) UpdateReposMostStars(ctx context.Context, perPage int) (err erro
 		return
 	}
 
-	if err = m.Analytic.PostReposMostStars(ctx, repos); err != nil {
+	if err = m.Stat.PostReposMostStars(ctx, repos); err != nil {
 		return
 	}
 	return
@@ -279,7 +278,7 @@ func (m *model) UpdateReposMostStars(ctx context.Context, perPage int) (err erro
 func (m *model) UpdateLanguagesMostPopular(ctx context.Context, perPage int) (err error) {
 	var languages []schema.LanguageCount
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "UpdateLanguagesMostPopular"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("perPage", perPage))
@@ -295,7 +294,7 @@ func (m *model) UpdateLanguagesMostPopular(ctx context.Context, perPage int) (er
 		return
 	}
 
-	if err = m.Analytic.PostMostPopularLanguage(ctx, languages); err != nil {
+	if err = m.Stat.PostMostPopularLanguage(ctx, languages); err != nil {
 		return
 	}
 	return
@@ -308,7 +307,7 @@ func (m *model) UpdateMostRecentReposByLanguage(ctx context.Context, perPage int
 	var repos []schema.RepoLanguage
 
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "UpdateMostRecentReposByLanguage"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("perPage", perPage))
@@ -335,7 +334,7 @@ func (m *model) UpdateMostRecentReposByLanguage(ctx context.Context, perPage int
 		})
 	}
 
-	if err = m.Analytic.PostMostRecentReposByLanguage(ctx, repos); err != nil {
+	if err = m.Stat.PostMostRecentReposByLanguage(ctx, repos); err != nil {
 		return
 	}
 	return
@@ -348,7 +347,7 @@ func (m *model) UpdateReposByLanguage(ctx context.Context, perPage int) (err err
 	var languages []schema.LanguageCount
 
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "UpdateReposByLanguage"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("perPage", perPage))
@@ -377,7 +376,7 @@ func (m *model) UpdateReposByLanguage(ctx context.Context, perPage int) (err err
 		})
 	}
 
-	if err = m.Analytic.PostReposByLanguage(ctx, users); err != nil {
+	if err = m.Stat.PostReposByLanguage(ctx, users); err != nil {
 		return
 	}
 
@@ -389,7 +388,7 @@ func (m *model) UpdateProfile(ctx context.Context, numWorkers int) (err error) {
 	var profiles []schema.Profile
 
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "UpdateProfile"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("numWorkers", numWorkers))

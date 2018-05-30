@@ -2,6 +2,7 @@ package statsvc
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
@@ -12,20 +13,26 @@ import (
 // Model represents the interface for the analytic business logic
 type (
 	model struct {
-		store Store
+		store  Store
+		logger *logger.Logger
 	}
 )
 
 // NewModel returns a new analytic model
-func NewModel(s Store) Service {
-	return &model{
-		store: s,
+func NewModel(s Store, l *logger.Logger) Service {
+	m := model{
+		store:  s,
+		logger: l,
 	}
+	if err := m.Init(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+	return &m
 }
 
 func (m *model) Init(ctx context.Context) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "Init"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -39,7 +46,7 @@ func (m *model) Init(ctx context.Context) (err error) {
 
 func (m *model) GetUserCount(ctx context.Context) (res *schema.UserCount, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "GetUserCount"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -55,7 +62,7 @@ func (m *model) GetUserCount(ctx context.Context) (res *schema.UserCount, err er
 
 func (m *model) PostUserCount(ctx context.Context, count int) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "PostUserCount"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("count", count))
@@ -70,7 +77,7 @@ func (m *model) PostUserCount(ctx context.Context, count int) (err error) {
 
 func (m *model) GetRepoCount(ctx context.Context) (res *RepoCount, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "GetRepoCount"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -84,7 +91,7 @@ func (m *model) GetRepoCount(ctx context.Context) (res *RepoCount, err error) {
 
 func (m *model) PostRepoCount(ctx context.Context, count int) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "PostRepoCount"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("count", count))
@@ -99,7 +106,7 @@ func (m *model) PostRepoCount(ctx context.Context, count int) (err error) {
 
 func (m *model) GetReposMostRecent(ctx context.Context) (res *ReposMostRecent, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "GetReposMostRecent"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -113,7 +120,7 @@ func (m *model) GetReposMostRecent(ctx context.Context) (res *ReposMostRecent, e
 
 func (m *model) PostReposMostRecent(ctx context.Context, repos []schema.Repo) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "PostReposMostRecent"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -127,7 +134,7 @@ func (m *model) PostReposMostRecent(ctx context.Context, repos []schema.Repo) (e
 
 func (m *model) GetRepoCountByUser(ctx context.Context) (res *RepoCountByUser, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "GetRepoCountByUser"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -141,7 +148,7 @@ func (m *model) GetRepoCountByUser(ctx context.Context) (res *RepoCountByUser, e
 
 func (m *model) PostRepoCountByUser(ctx context.Context, users []schema.UserCount) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "PostRepoCountByUser"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -155,7 +162,7 @@ func (m *model) PostRepoCountByUser(ctx context.Context, users []schema.UserCoun
 
 func (m *model) GetReposMostStars(ctx context.Context) (res *ReposMostStars, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "GetReposMostStars"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -169,7 +176,7 @@ func (m *model) GetReposMostStars(ctx context.Context) (res *ReposMostStars, err
 
 func (m *model) PostReposMostStars(ctx context.Context, repos []schema.Repo) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "PostReposMostStars"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -183,7 +190,7 @@ func (m *model) PostReposMostStars(ctx context.Context, repos []schema.Repo) (er
 
 func (m *model) GetMostPopularLanguage(ctx context.Context) (res *MostPopularLanguage, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "GetMostPopularLanguage"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -197,7 +204,7 @@ func (m *model) GetMostPopularLanguage(ctx context.Context) (res *MostPopularLan
 
 func (m *model) PostMostPopularLanguage(ctx context.Context, languages []schema.LanguageCount) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "PostMostPopularLanguage"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -211,7 +218,7 @@ func (m *model) PostMostPopularLanguage(ctx context.Context, languages []schema.
 
 func (m *model) GetLanguageCountByUser(ctx context.Context) (res *LanguageCountByUser, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "GetLanguageCountByUser"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -225,7 +232,7 @@ func (m *model) GetLanguageCountByUser(ctx context.Context) (res *LanguageCountB
 
 func (m *model) PostLanguageCountByUser(ctx context.Context, languages []schema.LanguageCount) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "PostLanguageCountByUser"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -239,7 +246,7 @@ func (m *model) PostLanguageCountByUser(ctx context.Context, languages []schema.
 
 func (m *model) GetMostRecentReposByLanguage(ctx context.Context) (res *MostRecentReposByLanguage, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "GetMostRecentReposByLanguage"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -253,7 +260,7 @@ func (m *model) GetMostRecentReposByLanguage(ctx context.Context) (res *MostRece
 
 func (m *model) PostMostRecentReposByLanguage(ctx context.Context, repos []schema.RepoLanguage) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "PostMostRecentReposByLanguage"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -267,7 +274,7 @@ func (m *model) PostMostRecentReposByLanguage(ctx context.Context, repos []schem
 
 func (m *model) GetReposByLanguage(ctx context.Context) (res *ReposByLanguage, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "GetReposByLanguage"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -281,7 +288,7 @@ func (m *model) GetReposByLanguage(ctx context.Context) (res *ReposByLanguage, e
 
 func (m *model) PostReposByLanguage(ctx context.Context, users []schema.UserCountByLanguage) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "PostReposByLanguage"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"go.uber.org/zap"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
 )
 
 // API represents the interface for Github's API
@@ -14,6 +14,6 @@ type API interface {
 }
 
 // New returns a new github api
-func New(client *http.Client, token, endpoint string, zlog *zap.Logger) API {
-	return NewModel(NewStore(client, token, endpoint), zlog)
+func New(client *http.Client, token, endpoint string, l *logger.Logger) API {
+	return NewModel(NewStore(client, token, endpoint), l)
 }

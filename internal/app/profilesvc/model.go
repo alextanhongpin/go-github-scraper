@@ -11,12 +11,13 @@ import (
 )
 
 type model struct {
-	store Store
+	store  Store
+	logger *logger.Logger
 }
 
 // NewModel returns a new model that fulfils the Service interface
-func NewModel(store Store) Service {
-	m := model{store: store}
+func NewModel(store Store, l *logger.Logger) Service {
+	m := model{store: store, logger: l}
 	if err := m.Init(context.Background()); err != nil {
 		log.Fatal(err)
 	}
@@ -27,7 +28,7 @@ func NewModel(store Store) Service {
 // tables for the storage or indexes
 func (m *model) Init(ctx context.Context) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "Init"),
 				zap.Duration("took", time.Since(start)))
 		if err != nil {
@@ -41,7 +42,7 @@ func (m *model) Init(ctx context.Context) (err error) {
 
 func (m *model) GetProfile(ctx context.Context, login string) (p *schema.Profile, err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "Init"),
 				zap.Duration("took", time.Since(start)),
 				zap.String("login", login))
@@ -56,7 +57,7 @@ func (m *model) GetProfile(ctx context.Context, login string) (p *schema.Profile
 
 func (m *model) UpdateProfile(ctx context.Context, login string, profile schema.Profile) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "UpdateProfile"),
 				zap.Duration("took", time.Since(start)),
 				zap.String("login", login))
@@ -71,7 +72,7 @@ func (m *model) UpdateProfile(ctx context.Context, login string, profile schema.
 
 func (m *model) BulkUpsert(ctx context.Context, profiles []schema.Profile) (err error) {
 	defer func(start time.Time) {
-		zlog := logger.RequestIDFromContext(ctx).
+		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "BulkUpsert"),
 				zap.Duration("took", time.Since(start)),
 				zap.Int("count", len(profiles)))
