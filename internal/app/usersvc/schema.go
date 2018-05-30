@@ -26,10 +26,6 @@ type GetUserCountResponse struct {
 	Count int `json:"count"`
 }
 
-type GetUserResponse struct {
-	Data *User `json:"data"`
-}
-
 type Logins struct {
 	Items []string `bson:"items,omitempty"`
 }

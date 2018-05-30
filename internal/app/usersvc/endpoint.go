@@ -46,6 +46,6 @@ func (e *endpoints) GetUser() httprouter.Handle {
 		ctx := r.Context()
 		login := ps.ByName("login")
 		user, err := e.svc.FindOne(ctx, login)
-		encoder.JSON(w, err, GetUserResponse{user})
+		encoder.JSON(w, err, user)
 	}
 }

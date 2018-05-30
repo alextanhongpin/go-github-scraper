@@ -1,3 +1,14 @@
+REPO := alextanhongpin/go-github-scraper
+
+VERSION := $(shell git rev-parse HEAD)
+BUILD_DATE := $(shell date -R)
+VCS_URL := $(shell basename `git rev-parse --show-toplevel`)
+VCS_REF := $(shell git log -1 --pretty=%h)
+NAME := $(shell basename `git rev-parse --show-toplevel`)
+VENDOR := $(shell whoami)
+
+SEMVER_VERSION := 1.0.0
+
 include .env
 
 start:
@@ -8,3 +19,14 @@ alloc:
 
 heap:
 	@go tool pprof -png http://localhost:8080/debug/pprof/heap > out.png
+
+docker:
+	@docker build -t ${REPO} --build-arg VERSION="${VERSION}" \
+	--build-arg BUILD_DATE="${BUILD_DATE}" \
+	--build-arg VCS_URL="${VCS_URL}" \
+	--build-arg VCS_REF="${VCS_REF}" \
+	--build-arg NAME="${NAME}" \
+	--build-arg VENDOR="${VENDOR}" .
+
+tag: 
+	@docker tag ${REPO}:latest ${REPO}:${SEMVER_VERSION}
