@@ -27,24 +27,27 @@ import (
 
 func init() {
 	viper.AutomaticEnv()
-	viper.SetDefault("crontab_user", "*/20 * * * * *")                     // The crontab for user, running every 20 seconds
-	viper.SetDefault("crontab_repo", "0 * * * * *")                        // The crontab for repo, running every minute
-	viper.SetDefault("crontab_stat", "@daily")                             // The crontab for stat, running daily
-	viper.SetDefault("crontab_profile", "@daily")                          // The crontab for profile, running daily
-	viper.SetDefault("crontab_user_enable", false)                         // The enable state of the crontab for user
-	viper.SetDefault("crontab_repo_enable", false)                         // The enable state of the crontab for repo
-	viper.SetDefault("crontab_stat_enable", false)                         // The enable state of the crontab for stat
-	viper.SetDefault("crontab_profile_enable", false)                      // The enable state of the crontab for profile
-	viper.SetDefault("db_name", "scraper")                                 // The name of the database
-	viper.SetDefault("db_host", "mongodb://myuser:mypass@localhost:27017") // The URI of the database
-	viper.SetDefault("github_location", "Malaysia")                        // The default country to scrape data from
-	viper.SetDefault("github_token", "")                                   // The Github's access token used to make call to the GraphQL Endpoint
-	viper.SetDefault("github_uri", "https://api.github.com/graphql")       // The Github's GraphQL Endpoint
-	viper.SetDefault("port", ":8080")                                      // The TCP port of the application
-	viper.SetDefault("cpuprofile", "cpu.prof")                             // Write cpuprofile to file, e.g. cpu.prof
-	viper.SetDefault("memprofile", "mem.prof")                             // Write memoryprofile to file, e.g. mem.prof
-	viper.SetDefault("httpprofile", false)                                 // Toggle state for http profiler
-	viper.SetDefault("graceful_timeout", "15")                             // The duration for which the server gracefully wait for existing connections to finish
+	viper.SetDefault("crontab_user", "*/20 * * * * *")               // The crontab for user, running every 20 seconds
+	viper.SetDefault("crontab_repo", "0 * * * * *")                  // The crontab for repo, running every minute
+	viper.SetDefault("crontab_stat", "@daily")                       // The crontab for stat, running daily
+	viper.SetDefault("crontab_profile", "@daily")                    // The crontab for profile, running daily
+	viper.SetDefault("crontab_user_enable", false)                   // The enable state of the crontab for user
+	viper.SetDefault("crontab_repo_enable", false)                   // The enable state of the crontab for repo
+	viper.SetDefault("crontab_stat_enable", false)                   // The enable state of the crontab for stat
+	viper.SetDefault("crontab_profile_enable", false)                // The enable state of the crontab for profile
+	viper.SetDefault("db_user", "root")                              // The username of the database
+	viper.SetDefault("db_pass", "example")                           // The password of the database
+	viper.SetDefault("db_name", "scraper")                           // The name of the database
+	viper.SetDefault("db_auth", "admin")                             // The name of the auth database
+	viper.SetDefault("db_host", "mongodb://localhost:27017")         // The URI of the database
+	viper.SetDefault("github_location", "Malaysia")                  // The default country to scrape data from
+	viper.SetDefault("github_token", "")                             // The Github's access token used to make call to the GraphQL Endpoint
+	viper.SetDefault("github_uri", "https://api.github.com/graphql") // The Github's GraphQL Endpoint
+	viper.SetDefault("port", ":8080")                                // The TCP port of the application
+	viper.SetDefault("cpuprofile", "cpu.prof")                       // Write cpuprofile to file, e.g. cpu.prof
+	viper.SetDefault("memprofile", "mem.prof")                       // Write memoryprofile to file, e.g. mem.prof
+	viper.SetDefault("httpprofile", false)                           // Toggle state for http profiler
+	viper.SetDefault("graceful_timeout", "15")                       // The duration for which the server gracefully wait for existing connections to finish
 	if viper.GetString("github_token") == "" {
 		panic("github_token environment variable is missing")
 	}
@@ -68,7 +71,12 @@ func main() {
 	defer l.Sync()
 
 	// Setup database
-	db := database.New(viper.GetString("db_host"), viper.GetString("db_name"))
+	db := database.New(
+		viper.GetString("db_host"),
+		viper.GetString("db_user"),
+		viper.GetString("db_pass"),
+		viper.GetString("db_name"),
+		viper.GetString("db_auth"))
 	defer db.Close()
 
 	// Setup services
@@ -135,15 +143,17 @@ func main() {
 			Fn: func() error {
 				ctx := context.Background()
 				ctx = logger.WrapContextWithRequestID(ctx)
+				defaultLimit := 20
+
 				nullFns := []null.Fn{
 					func() error { return msvc.UpdateUserCount(ctx) },
 					func() error { return msvc.UpdateRepoCount(ctx) },
-					func() error { return msvc.UpdateReposMostRecent(ctx, 20) },
-					func() error { return msvc.UpdateRepoCountByUser(ctx, 20) },
-					func() error { return msvc.UpdateReposMostStars(ctx, 20) },
-					func() error { return msvc.UpdateLanguagesMostPopular(ctx, 20) },
-					func() error { return msvc.UpdateMostRecentReposByLanguage(ctx, 20) },
-					func() error { return msvc.UpdateReposByLanguage(ctx, 20) },
+					func() error { return msvc.UpdateReposMostRecent(ctx, defaultLimit) },
+					func() error { return msvc.UpdateRepoCountByUser(ctx, defaultLimit) },
+					func() error { return msvc.UpdateReposMostStars(ctx, defaultLimit) },
+					func() error { return msvc.UpdateLanguagesMostPopular(ctx, defaultLimit) },
+					func() error { return msvc.UpdateMostRecentReposByLanguage(ctx, defaultLimit) },
+					func() error { return msvc.UpdateReposByLanguage(ctx, defaultLimit) },
 				}
 				var wg sync.WaitGroup
 				wg.Add(len(nullFns))

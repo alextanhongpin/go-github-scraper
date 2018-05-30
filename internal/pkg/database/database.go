@@ -1,6 +1,8 @@
 package database
 
 import (
+	"time"
+
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -23,8 +25,14 @@ func (db *DB) Collection(name string) (*mgo.Session, *mgo.Collection) {
 }
 
 // New returns a new pointer to the DB struct
-func New(mongoURI, name string) *DB {
-	s, err := mgo.Dial(mongoURI)
+func New(addr, username, password, database, auth string) *DB {
+	s, err := mgo.DialWithInfo(&mgo.DialInfo{
+		Username: username,
+		Password: password,
+		Database: auth,
+		Timeout:  time.Minute * 1,
+		Addrs:    []string{addr},
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -33,6 +41,6 @@ func New(mongoURI, name string) *DB {
 
 	return &DB{
 		Session: s,
-		Name:    name,
+		Name:    database,
 	}
 }
