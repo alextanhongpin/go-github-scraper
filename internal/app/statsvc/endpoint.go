@@ -33,6 +33,7 @@ func (e *endpoints) GetStats() httprouter.Handle {
 		switch r.URL.Query().Get("type") {
 		case EnumUserCount:
 			res, err = e.svc.GetUserCount(ctx)
+
 		case EnumRepoCount:
 			res, err = e.svc.GetRepoCount(ctx)
 		case EnumReposMostRecent:

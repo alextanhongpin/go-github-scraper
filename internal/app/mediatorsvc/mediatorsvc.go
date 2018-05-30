@@ -69,33 +69,59 @@ func makeEndDate(start string, months int) string {
 	return t2.Format("2006-01-02")
 }
 
-func (m *model) FetchUsers(ctx context.Context, location string, months int, perPage int) error {
-	zlog := logger.RequestIDFromContext(ctx)
+func (m *model) FetchUsers(ctx context.Context, location string, months int, perPage int) (err error) {
+	var users []github.User
+	var start, end string
 
-	start, _ := m.User.FindLastCreated(ctx)
-	end := makeEndDate(start, months)
+	defer func(s time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "FetchUsers"),
+				zap.Duration("took", time.Since(s)),
+				zap.String("location", location),
+				zap.Int("months", months),
+				zap.Int("perPage", perPage))
+		if err != nil {
+			zlog.Warn("error fetching and bulk upserting users", zap.Error(err))
+		} else {
+			zlog.Info("upsert users", zap.Int("count", len(users)))
+		}
+	}(time.Now())
 
-	users, err := m.Github.FetchUsersCursor(ctx, location, start, end, perPage)
+	start, _ = m.User.FindLastCreated(ctx)
+	end = makeEndDate(start, months)
+
+	users, err = m.Github.FetchUsersCursor(ctx, location, start, end, perPage)
 	if err != nil {
-		zlog.Warn("error fetching users", zap.Error(err))
-		return err
+		return
 	}
 
-	// Note that bulk upsert can only hold 1000 users max
-	if err := m.User.BulkUpsert(ctx, users); err != nil {
-		zlog.Warn("error upserting users", zap.Error(err))
-		return err
+	if err = m.User.BulkUpsert(ctx, users); err != nil {
+		return
 	}
-	return nil
+	return
 }
 
-func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int) error {
-	zlog := logger.RequestIDFromContext(ctx)
+func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int) (err error) {
+	var users []usersvc.User
+	var repos []github.Repo
+	defer func(s time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "FetchRepos"),
+				zap.Duration("took", time.Since(s)),
+				zap.Int("userPerPage", userPerPage),
+				zap.Int("repoPerPage", repoPerPage))
+		if err != nil {
+			zlog.Warn("error fetching and upserting repos", zap.Error(err))
+		} else {
+			zlog.Info("got users and upsert users",
+				zap.Int("users", len(users)),
+				zap.Int("repos", len(repos)))
+		}
+	}(time.Now())
 
-	users, err := m.User.FindLastFetched(ctx, userPerPage)
+	users, err = m.User.FindLastFetched(ctx, userPerPage)
 	if err != nil {
-		zlog.Error("unable to find last fetched users", zap.Error(err))
-		return err
+		return
 	}
 
 	for _, user := range users {
@@ -107,209 +133,280 @@ func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int) er
 		start, _ := m.Repo.FindLastCreatedByUser(ctx, login)
 		end := moment.NewCurrentFormattedDate()
 
-		repos, err := m.Github.FetchReposCursor(ctx, login, start, end, repoPerPage)
+		repos, err = m.Github.FetchReposCursor(ctx, login, start, end, repoPerPage)
 		if err != nil {
-			zlog.Warn("error fetching repos", zap.Error(err))
-			return err
+			return
 		}
 
-		if err := m.Repo.BulkUpsert(ctx, repos); err != nil {
-			zlog.Warn("error upserting repos", zap.Error(err))
-			return err
+		if err = m.Repo.BulkUpsert(ctx, repos); err != nil {
+			return
 		}
 
 		if err = m.User.UpdateOne(ctx, login); err != nil {
-			zlog.Warn("UpdateOne",
-				zap.Bool("error", true),
-				zap.String("login", login),
-				zap.Error(err))
-			return err
+			return
 		}
 	}
-	return nil
+	return
 }
 
 // UpdateUserCount updates the analytic type `user_count`
-func (m *model) UpdateUserCount(ctx context.Context) error {
-	zlog := logger.RequestIDFromContext(ctx)
+func (m *model) UpdateUserCount(ctx context.Context) (err error) {
+	var count int
+	defer func(start time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "UpdateUserCount"),
+				zap.Duration("took", time.Since(start)))
+		if err != nil {
+			zlog.Warn("error updating user count", zap.Error(err))
+		} else {
+			zlog.Info("update user count", zap.Int("count", count))
+		}
+	}(time.Now())
 
-	count, err := m.User.Count(ctx)
+	count, err = m.User.Count(ctx)
 	if err != nil {
-		zlog.Warn("error getting user count", zap.Error(err))
-		return err
+		return
 	}
-	if err := m.Analytic.PostUserCount(ctx, count); err != nil {
-		zlog.Warn("error updating user count", zap.Error(err))
-		return err
+
+	if err = m.Analytic.PostUserCount(ctx, count); err != nil {
+		return
 	}
-	zlog.Info("updated user count", zap.Int("count", count))
-	return nil
+	return
 }
 
 // UpdateRepoCount updates the analytic type `repo_count`
-func (m *model) UpdateRepoCount(ctx context.Context) error {
-	zlog := logger.RequestIDFromContext(ctx)
+func (m *model) UpdateRepoCount(ctx context.Context) (err error) {
+	var count int
+	defer func(start time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "UpdateRepoCount"),
+				zap.Duration("took", time.Since(start)))
+		if err != nil {
+			zlog.Warn("error updating repo count", zap.Error(err))
+		} else {
+			zlog.Info("update repo count", zap.Int("count", count))
+		}
+	}(time.Now())
 
-	count, err := m.Repo.Count(ctx)
+	count, err = m.Repo.Count(ctx)
 	if err != nil {
-		zlog.Warn("error getting repo count", zap.Error(err))
 		return err
 	}
-	if err := m.Analytic.PostRepoCount(ctx, count); err != nil {
-		zlog.Warn("error updating repo count", zap.Error(err))
+	if err = m.Analytic.PostRepoCount(ctx, count); err != nil {
 		return err
 	}
-	zlog.Info("updated repo count", zap.Int("count", count))
-	return nil
+	return
 }
 
 // UpdateReposMostRecent updates the analytic type `repos_most_recent`
-func (m *model) UpdateReposMostRecent(ctx context.Context, perPage int) error {
-	zlog := logger.RequestIDFromContext(ctx)
+func (m *model) UpdateReposMostRecent(ctx context.Context, perPage int) (err error) {
+	var repos []schema.Repo
+	defer func(start time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "UpdateReposMostRecent"),
+				zap.Duration("took", time.Since(start)))
+		if err != nil {
+			zlog.Warn("error updating repos most recent", zap.Error(err))
+		} else {
+			zlog.Info("update repo most recent", zap.Int("count", len(repos)))
+		}
+	}(time.Now())
 
-	repos, err := m.Repo.MostRecent(ctx, perPage)
+	repos, err = m.Repo.MostRecent(ctx, perPage)
 	if err != nil {
-		zlog.Warn("error fetching most recent repos", zap.Error(err))
-		return err
+		return
 	}
 
-	if err := m.Analytic.PostReposMostRecent(ctx, repos); err != nil {
-		zlog.Warn("error updating most recent repos", zap.Error(err))
-		return err
+	if err = m.Analytic.PostReposMostRecent(ctx, repos); err != nil {
+		return
 	}
-	zlog.Info("updated most recent repos", zap.Int("count", len(repos)))
-	return nil
+	return
 }
 
 // UpdateRepoCountByUser updates the analytic type `repo_count_by_user`
-func (m *model) UpdateRepoCountByUser(ctx context.Context, perPage int) error {
-	zlog := logger.RequestIDFromContext(ctx)
+func (m *model) UpdateRepoCountByUser(ctx context.Context, perPage int) (err error) {
+	var users []schema.UserCount
+	defer func(start time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "UpdateRepoCountByUser"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("perPage", perPage))
+		if err != nil {
+			zlog.Warn("error updating repo count by user", zap.Error(err))
+		} else {
+			zlog.Info("update user repo count by user", zap.Int("count", len(users)))
+		}
+	}(time.Now())
 
-	users, err := m.Repo.RepoCountByUser(ctx, perPage)
+	users, err = m.Repo.RepoCountByUser(ctx, perPage)
 	if err != nil {
-		zlog.Warn("error fetching repo count by users", zap.Error(err))
-		return err
+		return
 	}
 
-	if err := m.Analytic.PostRepoCountByUser(ctx, users); err != nil {
-		zlog.Warn("error updating repo count by users", zap.Error(err))
-		return err
+	if err = m.Analytic.PostRepoCountByUser(ctx, users); err != nil {
+		return
 	}
-	zlog.Info("updated repo count by users", zap.Int("count", len(users)))
-	return nil
+	return
 }
 
 // UpdateReposMostStars updates the analytic type `repos_most_stars`
-func (m *model) UpdateReposMostStars(ctx context.Context, perPage int) error {
-	zlog := logger.RequestIDFromContext(ctx)
+func (m *model) UpdateReposMostStars(ctx context.Context, perPage int) (err error) {
+	var repos []schema.Repo
+	defer func(start time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "UpdateReposMostStars"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("perPage", perPage))
+		if err != nil {
+			zlog.Warn("error updating repos most stars", zap.Error(err))
+		} else {
+			zlog.Info("update repos most stars", zap.Int("count", len(repos)))
+		}
+	}(time.Now())
 
-	repos, err := m.Repo.MostStars(ctx, perPage)
+	repos, err = m.Repo.MostStars(ctx, perPage)
 	if err != nil {
-		zlog.Warn("error fetching most stars repos", zap.Error(err))
-		return err
+		return
 	}
 
-	if err := m.Analytic.PostReposMostStars(ctx, repos); err != nil {
-		zlog.Warn("error updating repo count by users", zap.Error(err))
-		return err
+	if err = m.Analytic.PostReposMostStars(ctx, repos); err != nil {
+		return
 	}
-	zlog.Info("updated repos most stars", zap.Int("count", len(repos)))
-	return nil
+	return
 }
 
 // UpdateLanguagesMostPopular updates the analytic type `languages_most_popular`
-func (m *model) UpdateLanguagesMostPopular(ctx context.Context, perPage int) error {
-	zlog := logger.RequestIDFromContext(ctx)
+func (m *model) UpdateLanguagesMostPopular(ctx context.Context, perPage int) (err error) {
+	var languages []schema.LanguageCount
+	defer func(start time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "UpdateLanguagesMostPopular"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("perPage", perPage))
+		if err != nil {
+			zlog.Warn("error updating language most popular", zap.Error(err))
+		} else {
+			zlog.Info("update language most popular", zap.Int("count", len(languages)))
+		}
+	}(time.Now())
 
-	languages, err := m.Repo.MostPopularLanguage(ctx, perPage)
+	languages, err = m.Repo.MostPopularLanguage(ctx, perPage)
 	if err != nil {
-		zlog.Warn("error fetching language most popular", zap.Error(err))
-		return err
+		return
 	}
 
-	if err := m.Analytic.PostMostPopularLanguage(ctx, languages); err != nil {
-		zlog.Warn("error updating language most popular", zap.Error(err))
-		return err
+	if err = m.Analytic.PostMostPopularLanguage(ctx, languages); err != nil {
+		return
 	}
-	zlog.Info("updated popular languages", zap.Int("count", len(languages)))
-	return nil
+	return
 }
 
 // UpdateMostRecentReposByLanguage updates the analytic type `repos_most_recent_by_language`
-func (m *model) UpdateMostRecentReposByLanguage(ctx context.Context, perPage int) error {
-	zlog := logger.RequestIDFromContext(ctx)
+func (m *model) UpdateMostRecentReposByLanguage(ctx context.Context, perPage int) (err error) {
+	var languages []schema.LanguageCount
+	var r []schema.Repo
+	var repos []schema.RepoLanguage
 
-	languages, err := m.Repo.MostPopularLanguage(ctx, perPage)
+	defer func(start time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "UpdateMostRecentReposByLanguage"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("perPage", perPage))
+		if err != nil {
+			zlog.Warn("error updating most recent repos by language", zap.Error(err))
+		} else {
+			zlog.Info("update most recent repos by language", zap.Int("count", len(repos)))
+		}
+	}(time.Now())
+
+	languages, err = m.Repo.MostPopularLanguage(ctx, perPage)
 	if err != nil {
-		zlog.Warn("error fetching language most popular", zap.Error(err))
 		return err
 	}
 
-	var reposByLanguages []schema.RepoLanguage
 	for _, lang := range languages {
-		r, err := m.Repo.MostRecentReposByLanguage(ctx, lang.Name, perPage)
+		r, err = m.Repo.MostRecentReposByLanguage(ctx, lang.Name, perPage)
 		if err != nil {
-			zlog.Warn("error fetching most recent repos by language", zap.Error(err))
-			return err
+			return
 		}
-		reposByLanguages = append(reposByLanguages, schema.RepoLanguage{
+		repos = append(repos, schema.RepoLanguage{
 			Language: lang.Name,
 			Repos:    r,
 		})
 	}
 
-	if err := m.Analytic.PostMostRecentReposByLanguage(ctx, reposByLanguages); err != nil {
-		zlog.Warn("error updating most recent repos by language", zap.Error(err))
-		return err
+	if err = m.Analytic.PostMostRecentReposByLanguage(ctx, repos); err != nil {
+		return
 	}
-	zlog.Info("updated most recent repos by language", zap.Int("count", len(reposByLanguages)))
-	return nil
+	return
 }
 
 // UpdateReposByLanguage updates the analytic type `repos_by_language`
-func (m *model) UpdateReposByLanguage(ctx context.Context, perPage int) error {
-	zlog := logger.RequestIDFromContext(ctx)
+func (m *model) UpdateReposByLanguage(ctx context.Context, perPage int) (err error) {
+	var u []schema.UserCount
+	var users []schema.UserCountByLanguage
+	var languages []schema.LanguageCount
 
-	languages, err := m.Repo.MostPopularLanguage(ctx, perPage)
+	defer func(start time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "UpdateReposByLanguage"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("perPage", perPage))
+
+		if err != nil {
+			zlog.Warn("error updating repos by language", zap.Error(err))
+		} else {
+			zlog.Info("update repos by language", zap.Int("count", len(users)))
+		}
+	}(time.Now())
+
+	languages, err = m.Repo.MostPopularLanguage(ctx, perPage)
 	if err != nil {
-		zlog.Warn("error fetching language most popular", zap.Error(err))
-		return err
+		return
 	}
 
-	var userCountByLanguage []schema.UserCountByLanguage
 	for _, lang := range languages {
-		users, err := m.Repo.ReposByLanguage(ctx, lang.Name, perPage)
+		u, err = m.Repo.ReposByLanguage(ctx, lang.Name, perPage)
 		if err != nil {
-			zlog.Warn("error fetching user repo count by language", zap.Error(err))
-			return err
+			return
 		}
 
-		userCountByLanguage = append(userCountByLanguage, schema.UserCountByLanguage{
+		users = append(users, schema.UserCountByLanguage{
 			Language: lang.Name,
-			Users:    users,
+			Users:    u,
 		})
 	}
 
-	if err := m.Analytic.PostReposByLanguage(ctx, userCountByLanguage); err != nil {
-		zlog.Warn("error updating user repo count by language", zap.Error(err))
-		return err
+	if err = m.Analytic.PostReposByLanguage(ctx, users); err != nil {
+		return
 	}
 
-	zlog.Info("updated repos by languages", zap.Int("count", len(userCountByLanguage)))
-	return nil
+	return
 }
 
-func (m *model) UpdateProfile(ctx context.Context, numWorkers int) error {
-	zlog := logger.RequestIDFromContext(ctx)
+func (m *model) UpdateProfile(ctx context.Context, numWorkers int) (err error) {
+	var logins []string
+	var profiles []schema.Profile
 
-	logins, err := m.Repo.DistinctLogin(ctx)
+	defer func(start time.Time) {
+		zlog := logger.RequestIDFromContext(ctx).
+			With(zap.String("method", "UpdateProfile"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("numWorkers", numWorkers))
+
+		if err != nil {
+			zlog.Warn("error updating profile", zap.Error(err))
+		} else {
+			zlog.Info("update profile",
+				zap.Int("logins", len(logins)),
+				zap.Int("profiles", len(profiles)))
+		}
+	}(time.Now())
+
+	logins, err = m.Repo.DistinctLogin(ctx)
 	if err != nil {
-		zlog.Warn("error getting distinct login", zap.Error(err))
-		return err
+		return
 	}
-
-	zlog.Info("got distinct logins",
-		zap.Int("count", len(logins)))
 
 	toStream := func(ctx context.Context, args ...string) <-chan string {
 		c := make(chan string)
@@ -358,15 +455,13 @@ func (m *model) UpdateProfile(ctx context.Context, numWorkers int) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	var profiles []schema.Profile
 	for p := range fanIn(ctx, numWorkers, toStream(ctx, logins...)) {
 		profiles = append(profiles, p)
 	}
 
 	if err = m.Profile.BulkUpsert(ctx, profiles); err != nil {
-		zlog.Warn("error upserting", zap.Error(err))
-		return err
+		return
 	}
 
-	return nil
+	return
 }

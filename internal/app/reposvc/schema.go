@@ -1,7 +1,8 @@
 package reposvc
 
+// GetRepoCountResponse represents the response of the count
 type GetRepoCountResponse struct {
-	Count int `json:"count,omitempty"`
+	Count int `json:"count"` // Should default to zero if not found
 }
 
 type Watchers struct {

@@ -11,6 +11,7 @@ import (
 )
 
 type (
+	// Store represents the methods that the store expose
 	Store interface {
 		Init() error
 		GetProfile(login string) (*schema.Profile, error)
