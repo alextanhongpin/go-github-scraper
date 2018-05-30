@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/robfig/cron"
+	"go.uber.org/zap"
 )
 
 type (
@@ -38,6 +39,9 @@ func (cfg *Config) Do(ctx context.Context) {
 		cfg.Fn(ctx)
 	})
 	c.Start()
+	zap.L().Info("started cron",
+		zap.String("name", cfg.Name),
+		zap.String("tab", cfg.CronTab))
 }
 
 // Exec runs a list of cronjobs

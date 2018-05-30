@@ -26,11 +26,11 @@ import (
 
 func init() {
 	viper.AutomaticEnv()
-	viper.SetDefault("crontab_user_tab", "*/20 * * * * *")           // The crontab for user, running every 20 seconds
+	viper.SetDefault("crontab_user_tab", "* * * * * *")              // The crontab for user, running every 20 seconds
 	viper.SetDefault("crontab_repo_tab", "0 * * * * *")              // The crontab for repo, running every minute
-	viper.SetDefault("crontab_stat_tab", "@daily")                   // The crontab for stat, running daily
-	viper.SetDefault("crontab_profile_tab", "@daily")                // The crontab for profile, running daily
-	viper.SetDefault("crontab_match_tab", "@daily")                  // The crontab for matching, running daily
+	viper.SetDefault("crontab_stat_tab", "0 10 0 * * *")             // The crontab for stat, running ten minutes after midnight
+	viper.SetDefault("crontab_profile_tab", "@midnight")             // The crontab for profile, running at midnight
+	viper.SetDefault("crontab_match_tab", "0 15 0 * * *")            // The crontab for matching, running fifteen minutes after midnight
 	viper.SetDefault("crontab_user_enable", false)                   // The enable state of the crontab for user
 	viper.SetDefault("crontab_repo_enable", false)                   // The enable state of the crontab for repo
 	viper.SetDefault("crontab_stat_enable", false)                   // The enable state of the crontab for stat
@@ -53,7 +53,7 @@ func init() {
 	viper.SetDefault("cpuprofile", "cpu.prof")                       // Write cpuprofile to file, e.g. cpu.prof
 	viper.SetDefault("memprofile", "mem.prof")                       // Write memoryprofile to file, e.g. mem.prof
 	viper.SetDefault("httpprofile", false)                           // Toggle state for http profiler
-	viper.SetDefault("graceful_timeout", "15")                       // The duration for which the server gracefully wait for existing connections to finish
+	viper.SetDefault("graceful_timeout", 15)                         // The duration for which the server gracefully wait for existing connections to finish
 	if viper.GetString("github_token") == "" {
 		panic("github_token environment variable is missing")
 	}
