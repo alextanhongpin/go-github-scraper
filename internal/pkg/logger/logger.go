@@ -42,7 +42,6 @@ func New() *Logger {
 		log.Fatal(err)
 	}
 	l = l.Named("main")
-
 	// Inject hostname for discoverability when scaling services in docker
 	hostname, err := os.Hostname()
 	if err != nil {

@@ -11,7 +11,7 @@ import (
 // Service represents the analytic service
 type Service interface {
 	Init(ctx context.Context) error
-	GetUserCount(ctx context.Context) (*schema.UserCount, error)
+	GetUserCount(ctx context.Context) (*UserCount, error)
 	PostUserCount(ctx context.Context, count int) error
 	GetRepoCount(ctx context.Context) (*RepoCount, error)
 	PostRepoCount(ctx context.Context, count int) error

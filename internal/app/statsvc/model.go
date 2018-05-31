@@ -44,7 +44,7 @@ func (m *model) Init(ctx context.Context) (err error) {
 	return m.store.Init()
 }
 
-func (m *model) GetUserCount(ctx context.Context) (res *schema.UserCount, err error) {
+func (m *model) GetUserCount(ctx context.Context) (res *UserCount, err error) {
 	defer func(start time.Time) {
 		zlog := logger.Wrap(ctx, m.logger).
 			With(zap.String("method", "GetUserCount"),
@@ -53,7 +53,6 @@ func (m *model) GetUserCount(ctx context.Context) (res *schema.UserCount, err er
 			zlog.Error("error getting user count", zap.Error(err))
 		} else {
 			zlog.Info("get user count",
-				zap.String("name", res.Name),
 				zap.Int("count", res.Count))
 		}
 	}(time.Now())

@@ -70,3 +70,8 @@ type ReposByLanguage struct {
 	DateInfo `bson:",inline"`
 	Users    []schema.UserCountByLanguage `json:"users,omitempty" bson:"users,omitempty"`
 }
+
+// IndexResponse represents the response returned when the "/stats" route is called
+type IndexResponse struct {
+	Paths []string `json:"paths,omitempty"`
+}

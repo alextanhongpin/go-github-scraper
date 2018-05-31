@@ -44,15 +44,23 @@ func (e *endpoints) GetStats() httprouter.Handle {
 			res, err = e.svc.GetReposMostStars(ctx)
 		case EnumMostPopularLanguage:
 			res, err = e.svc.GetMostPopularLanguage(ctx)
-		case EnumLanguageCountByUser:
-			res, err = e.svc.GetLanguageCountByUser(ctx)
 		case EnumMostRecentReposByLanguage:
 			res, err = e.svc.GetMostRecentReposByLanguage(ctx)
 		case EnumReposByLanguage:
 			res, err = e.svc.GetReposByLanguage(ctx)
 		default:
-			http.Error(w, "query type is missing", http.StatusBadRequest)
-			return
+			res = IndexResponse{
+				Paths: []string{
+					"/stats?type=user_count",
+					"/stats?type=repo_count",
+					"/stats?type=repos_most_recent",             // v1/analytics?type=leaderboard_last_updated_repos
+					"/stats?type=repo_count_by_user",            // analytics?type=leaderboard_most_repos
+					"/stats?type=repos_most_stars",              // v1/analytics?type=leaderboard_most_stars_repos
+					"/stats?type=languages_most_popular",        // leaderboard_languages
+					"/stats?type=repos_most_recent_by_language", //
+					"/stats?type=repos_by_language",             // leaderboard_most_repos_by_language
+				},
+			}
 		}
 		encoder.JSON(w, err, res)
 	}

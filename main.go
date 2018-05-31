@@ -19,6 +19,7 @@ import (
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/null"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/profiler"
+	"github.com/rs/cors"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/spf13/viper"
@@ -26,7 +27,7 @@ import (
 
 func init() {
 	viper.AutomaticEnv()
-	viper.SetDefault("crontab_user_tab", "* * * * * *")              // The crontab for user, running every 20 seconds
+	viper.SetDefault("crontab_user_tab", "*/20 * * * * *")           // The crontab for user, running every 20 seconds
 	viper.SetDefault("crontab_repo_tab", "0 * * * * *")              // The crontab for repo, running every minute
 	viper.SetDefault("crontab_stat_tab", "0 10 0 * * *")             // The crontab for stat, running ten minutes after midnight
 	viper.SetDefault("crontab_profile_tab", "@midnight")             // The crontab for profile, running at midnight
@@ -95,7 +96,6 @@ func main() {
 			viper.GetString("github_token"),
 			viper.GetString("github_uri"),
 			l),
-		// Profile: profilesvc.New(db, l.Named("profilesvc")),
 		Repo: reposvc.New(db, l.Named("reposvc")),
 		User: usersvc.New(db, l.Named("usersvc")),
 	}
@@ -201,12 +201,14 @@ func main() {
 	usersvc.MakeEndpoints(m.User, r) // A better way? - usvc.Wrap(r), usersvc.Bind(usvc, r)
 	statsvc.MakeEndpoints(m.Stat, r)
 	reposvc.MakeEndpoints(m.Repo, r)
-	// profilesvc.MakeEndpoints(m.Profile, r)
+
+	// Add cors support
+	handler := cors.Default().Handler(r)
 
 	// a http.Server with pre-configured timeouts to avoid Slowloris attack
 	srv := &http.Server{
 		Addr:           viper.GetString("port"),
-		Handler:        r,
+		Handler:        handler,
 		ReadTimeout:    time.Second * 10, // Variable always on the right, not 10 * time.Second
 		WriteTimeout:   time.Second * 10,
 		IdleTimeout:    time.Second * 60,

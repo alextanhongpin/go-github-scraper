@@ -17,7 +17,7 @@ var errTypeAssertion = errors.New("unable to perform type assertion")
 type (
 	Store interface {
 		Init() error
-		GetUserCount() (*schema.UserCount, error)
+		GetUserCount() (*UserCount, error)
 		PostUserCount(count int) error
 		GetRepoCount() (*RepoCount, error)
 		PostRepoCount(count int) error
@@ -61,10 +61,10 @@ func (s *store) Init() error {
 	})
 }
 
-func (s *store) GetUserCount() (*schema.UserCount, error) {
+func (s *store) GetUserCount() (*UserCount, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	var res schema.UserCount
+	var res UserCount
 	if err := c.
 		Find(bson.M{"type": EnumUserCount}).
 		One(&res); err != nil {
