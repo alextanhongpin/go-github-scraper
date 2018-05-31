@@ -12,6 +12,7 @@ type User struct {
 	Name         string       `json:"name,omitempty" bson:"name,omitempty"`
 	CreatedAt    time.Time    `json:"createdAt,omitempty" bson:"createdAt,omitempty"`
 	UpdatedAt    time.Time    `json:"updatedAt,omitempty" bson:"updatedAt,omitempty"`
+	FetchedAt    time.Time    `json:"fetchedAt,omitempty" bson:"fetchedAt,omitempty"`
 	Login        string       `json:"login,omitempty" bson:"login,omitempty"`
 	Bio          string       `json:"bio,omitempty" bson:"bio,omitempty"`
 	Location     string       `json:"location,omitempty" bson:"location,omitempty"`

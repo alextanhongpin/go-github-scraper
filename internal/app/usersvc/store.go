@@ -87,7 +87,7 @@ func (s *store) FindLastCreated() (*User, error) {
 
 	var user User
 	if err := c.Find(bson.M{}).
-		Sort("-createdAt").
+		Sort("-$createdAt").
 		One(&user); err != nil {
 		return nil, err
 	}
@@ -239,13 +239,16 @@ func (s *store) Drop() error {
 func (s *store) UpdateOne(login string) error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	return c.Update(bson.M{
-		"login": login,
-	}, bson.M{
-		"$set": bson.M{
-			"fetchedAt": moment.NewUTCDate(),
-		},
-	})
+	_, err := c.Upsert(bson.M{"login": login},
+		bson.M{
+			"$set": bson.M{
+				"fetchedAt": moment.NewUTCDate(),
+			},
+		})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *store) WithRepos(count int) ([]User, error) {

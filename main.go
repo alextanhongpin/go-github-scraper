@@ -127,7 +127,7 @@ func main() {
 			Trigger:     viper.GetBool("crontab_repo_trigger"),
 			Fn: func(ctx context.Context) error {
 				ctx = logger.WrapContextWithRequestID(ctx)
-				userPerPage := 30
+				userPerPage := 100
 				repoPerPage := 30
 				return msvc.FetchRepos(ctx, userPerPage, repoPerPage)
 			},

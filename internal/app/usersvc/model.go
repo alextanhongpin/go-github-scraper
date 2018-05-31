@@ -51,7 +51,7 @@ func (m *model) MostRecent(ctx context.Context, limit int) (users []User, err er
 			zlog.Info("get most recent users")
 		}
 	}(time.Now())
-	return m.store.FindAll(limit, []string{"-updatedAt"})
+	return m.store.FindAll(limit, []string{"-createdAt"})
 }
 
 func (m *model) BulkUpsert(ctx context.Context, users []github.User) (err error) {
@@ -147,7 +147,7 @@ func (m *model) FindLastFetched(ctx context.Context, limit int) (res []User, err
 			zlog.Info("find last fetched")
 		}
 	}(time.Now())
-	return m.store.FindAll(limit, []string{"-fetchedAt"})
+	return m.store.FindAll(limit, []string{"fetchedAt"})
 }
 
 func (m *model) Count(ctx context.Context) (count int, err error) {
