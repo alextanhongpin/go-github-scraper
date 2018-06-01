@@ -4,6 +4,7 @@ import (
 	"context"
 	stdlog "log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"sync"
@@ -41,7 +42,7 @@ func init() {
 	viper.SetDefault("crontab_repo_trigger", false)                  // Will run once if set to true
 	viper.SetDefault("crontab_stat_trigger", false)                  // Will run once if set to true
 	viper.SetDefault("crontab_profile_trigger", false)               // Will run once if set to true
-	viper.SetDefault("crontab_match_trigger", false)                 // Will run once if set to true
+	viper.SetDefault("crontab_match_trigger", true)                  // Will run once if set to true
 	viper.SetDefault("db_user", "root")                              // The username of the database
 	viper.SetDefault("db_pass", "example")                           // The password of the database
 	viper.SetDefault("db_name", "scraper")                           // The name of the database
@@ -51,8 +52,10 @@ func init() {
 	viper.SetDefault("github_token", "")                             // The Github's access token used to make call to the GraphQL Endpoint
 	viper.SetDefault("github_uri", "https://api.github.com/graphql") // The Github's GraphQL Endpoint
 	viper.SetDefault("port", ":8080")                                // The TCP port of the application
-	viper.SetDefault("cpuprofile", "cpu.prof")                       // Write cpuprofile to file, e.g. cpu.prof
-	viper.SetDefault("memprofile", "mem.prof")                       // Write memoryprofile to file, e.g. mem.prof
+	viper.SetDefault("pprof_port", ":6060")                          // The TCP port of for the http profiling
+	viper.SetDefault("pprof_enable", false)                          // Toggle flag for pprof
+	viper.SetDefault("cpuprofile", "")                               // Write cpuprofile to file, e.g. cpu.prof
+	viper.SetDefault("memprofile", "")                               // Write memoryprofile to file, e.g. mem.prof
 	viper.SetDefault("httpprofile", false)                           // Toggle state for http profiler
 	viper.SetDefault("graceful_timeout", 15)                         // The duration for which the server gracefully wait for existing connections to finish
 	if viper.GetString("github_token") == "" {
@@ -194,9 +197,6 @@ func main() {
 	// Setup router
 	r := httprouter.New()
 
-	// Setup http profiling
-	profiler.MakeHTTP(viper.GetBool("httpprofile"), r)
-
 	// Setup endpoints, can also add feature toggle capabilities
 	usersvc.MakeEndpoints(m.User, r) // A better way? - usvc.Wrap(r), usersvc.Bind(usvc, r)
 	statsvc.MakeEndpoints(m.Stat, r)
@@ -213,6 +213,13 @@ func main() {
 		WriteTimeout:   time.Second * 10,
 		IdleTimeout:    time.Second * 60,
 		MaxHeaderBytes: 1 << 20,
+	}
+
+	// Setup pprof net/http
+	if viper.GetBool("pprof_enable") {
+		go func() {
+			stdlog.Fatal(http.ListenAndServe(viper.GetString("pprof_port"), nil))
+		}()
 	}
 
 	// Run our server in a goroutine so that it doesn't block

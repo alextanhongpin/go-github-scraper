@@ -26,6 +26,7 @@ type (
 		Drop() error
 		Init() error
 		FindAll(limit int, sort []string) ([]schema.Repo, error)
+		FindAllFor(login string) ([]schema.Repo, error)
 		FindLastCreatedByUser(login string) (*schema.Repo, error)
 		FindOne(nameWithOwner string) (*schema.Repo, error)
 		ForksFor(login string) (int64, error)
@@ -84,6 +85,24 @@ func (s *store) FindAll(limit int, sort []string) ([]schema.Repo, error) {
 		All(&repos); err != nil {
 		return nil, err
 	}
+	return repos, nil
+}
+
+func (s *store) FindAllFor(login string) ([]schema.Repo, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	var repos []schema.Repo
+	q := bson.M{
+		"login":  login,
+		"isFork": false,
+	}
+
+	if err := c.Find(q).
+		All(&repos); err != nil {
+		return nil, err
+	}
+
 	return repos, nil
 }
 

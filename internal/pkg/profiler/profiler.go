@@ -1,27 +1,37 @@
-// Package profiler contains the logic to integrate profilling with julienschmidt
-// httprouter package
 package profiler
 
 import (
-	"net/http"
-	"net/http/pprof"
-
-	"github.com/julienschmidt/httprouter"
+	"log"
+	"os"
+	"runtime"
+	"runtime/pprof"
 )
 
-// MakeHTTP will setup the profile
-func MakeHTTP(enable bool, r *httprouter.Router) {
-	if !enable {
-		return
+// MakeCPU sets the cpu profiling if the output filename is provided
+func MakeCPU(file string) {
+	if file != "" {
+		f, err := os.Create(file)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
 	}
-	// Setup profiling
-	r.HandlerFunc(http.MethodGet, "/debug/pprof/", pprof.Index)
-	r.HandlerFunc(http.MethodGet, "/debug/pprof/cmdline", pprof.Cmdline)
-	r.HandlerFunc(http.MethodGet, "/debug/pprof/profile", pprof.Profile)
-	r.HandlerFunc(http.MethodGet, "/debug/pprof/symbol", pprof.Symbol)
-	r.HandlerFunc(http.MethodGet, "/debug/pprof/trace", pprof.Trace)
-	r.Handler(http.MethodGet, "/debug/pprof/goroutine", pprof.Handler("goroutine"))
-	r.Handler(http.MethodGet, "/debug/pprof/heap", pprof.Handler("heap"))
-	r.Handler(http.MethodGet, "/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
-	r.Handler(http.MethodGet, "/debug/pprof/block", pprof.Handler("block"))
+}
+
+// MakeMemory sets the memory profiling if the output filename is provided
+func MakeMemory(file string) {
+	if file != "" {
+		f, err := os.Create(file)
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		defer f.Close()
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
+	}
 }

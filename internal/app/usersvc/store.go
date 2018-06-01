@@ -15,7 +15,6 @@ type (
 	Store interface {
 		BulkUpsert(users []github.User) error
 		BulkUpdate(users []User) error
-		BulkMatches(users []User) error
 		Count() (int, error)
 		Drop() error
 		FindOne(login string) (*User, error)
@@ -183,36 +182,6 @@ func (s *store) BulkUpdate(users []User) error {
 				bson.M{"login": user.Login},
 				bson.M{
 					"$set": user.Profile.BSON(),
-				},
-			)
-		}
-		if _, err := bulk.Run(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s *store) BulkMatches(users []User) error {
-	sess, c := s.db.Collection(s.collection)
-	defer sess.Close()
-
-	// Mongo can only process a max of 1000 items
-	perBulk := 500
-	partitions, bucket := partitioner.New(perBulk, len(users))
-
-	for i := 0; i < bucket; i++ {
-		p := partitions[i]
-
-		bulk := c.Bulk()
-		for _, user := range users[p.Start:p.End] {
-			bulk.Upsert(
-				bson.M{"login": user.Login},
-				bson.M{
-					"$set": bson.M{
-						"matches": user.Profile.Matches,
-					},
 				},
 			)
 		}

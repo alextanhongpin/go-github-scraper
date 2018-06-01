@@ -12,7 +12,6 @@ import (
 type Service interface {
 	BulkUpsert(ctx context.Context, users []github.User) error
 	BulkUpdate(ctx context.Context, users []User) error
-	BulkMatches(ctx context.Context, users []User) error
 	Count(ctx context.Context) (int, error)
 	Drop(ctx context.Context) error
 	FindOne(ctx context.Context, login string) (*User, error)

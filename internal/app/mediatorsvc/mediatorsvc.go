@@ -404,8 +404,6 @@ func (m *model) UpdateProfile(ctx context.Context, numWorkers int) (err error) {
 		}
 	}(time.Now())
 
-	// logins = []string{"alextanhongpin"}
-
 	logins, err = m.Repo.DistinctLogin(ctx)
 	if err != nil {
 		return
@@ -481,30 +479,33 @@ func (m *model) UpdateMatches(ctx context.Context) (err error) {
 			zlog.Info("update matches")
 		}
 	}(time.Now())
+	maxMatches := 20
 	var users []usersvc.User
-	var res []usersvc.User
 	users, err = m.User.WithRepos(ctx, 0)
 
-	for i, p1 := range users {
+	for i := 0; i < len(users); i++ {
+		p1 := users[i]
 		var matches []schema.User
-		for j, p2 := range users {
-			if i != j {
-				matches = append(matches, schema.User{
-					Login:     p2.Login,
-					AvatarURL: p2.AvatarURL,
-					Score:     recsys(p1, p2),
-				})
+
+		for j := 0; j < len(users); j++ {
+			p2 := users[j]
+			if i == j {
+				continue
 			}
+
+			matches = append(matches, schema.User{
+				Login:     p2.Login,
+				AvatarURL: p2.AvatarURL,
+				Score:     recsys(p1, p2),
+			})
 		}
 		sort.SliceStable(matches, func(i, j int) bool {
 			return matches[i].Score > matches[j].Score
 		})
-		res = append(res, usersvc.User{
-			Login:   p1.Login,
-			Profile: schema.Profile{Matches: matches[:take(20, len(matches))]}})
+		users[i].Profile.Matches = matches[:take(len(matches), maxMatches)]
 	}
 
-	if err = m.User.BulkMatches(ctx, res); err != nil {
+	if err = m.User.BulkUpdate(ctx, users); err != nil {
 		return
 	}
 

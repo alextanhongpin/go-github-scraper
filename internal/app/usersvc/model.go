@@ -84,21 +84,6 @@ func (m *model) BulkUpdate(ctx context.Context, users []User) (err error) {
 	return m.store.BulkUpdate(users)
 }
 
-func (m *model) BulkMatches(ctx context.Context, users []User) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "BulkMatches"),
-				zap.Duration("took", time.Since(start)),
-				zap.Int("count", len(users)))
-		if err != nil {
-			zlog.Warn("error updating matches bulk", zap.Error(err))
-		} else {
-			zlog.Info("update matches bulk")
-		}
-	}(time.Now())
-	return m.store.BulkMatches(users)
-}
-
 func (m *model) Drop(ctx context.Context) (err error) {
 	defer func(start time.Time) {
 		zlog := logger.Wrap(ctx, m.logger).
