@@ -498,10 +498,14 @@ func (m *model) UpdateMatches(ctx context.Context) (err error) {
 				AvatarURL: p2.AvatarURL,
 				Score:     recsys(p1, p2),
 			})
+
+			if len(matches) > maxMatches*2 {
+				sort.SliceStable(matches, func(i, j int) bool {
+					return matches[i].Score > matches[j].Score
+				})
+				matches = matches[:maxMatches]
+			}
 		}
-		sort.SliceStable(matches, func(i, j int) bool {
-			return matches[i].Score > matches[j].Score
-		})
 		users[i].Profile.Matches = matches[:take(len(matches), maxMatches)]
 	}
 
