@@ -68,3 +68,9 @@ The other – ‘–inuse_space’ tells you know how many are still in use.
 <!-- $ go tool pprof --inuse_objects http://localhost:6060/debug/pprof/heap -->
 $ go tool pprof --inuse_space http://localhost:6060/debug/pprof/heap
 ```
+
+<!-- ## mgodump
+
+mongodump -u root --authenticationDatabase=admin --db=scraper --collection=users --out dump/
+
+mongoexport --authenticationDatabase=admin -d scraper -o user.json --jsonArray -c users -u root -->
