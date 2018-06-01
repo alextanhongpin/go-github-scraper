@@ -1,8 +1,6 @@
 package reposvc
 
 import (
-	"sort"
-
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/partitioner"
@@ -28,12 +26,6 @@ type (
 		FindAll(limit int, sort []string) ([]schema.Repo, error)
 		FindAllFor(login string) ([]schema.Repo, error)
 		FindLastCreatedByUser(login string) (*schema.Repo, error)
-		FindOne(nameWithOwner string) (*schema.Repo, error)
-		ForksFor(login string) (int64, error)
-		KeywordsFor(login string, limit int) ([]schema.Keyword, error)
-		StargazersFor(login string) (int64, error)
-		Upsert(github.Repo) error
-		WatchersFor(login string) (int64, error)
 	}
 
 	// store is a struct that holds store configuration
@@ -59,19 +51,6 @@ func (s *store) Init() error {
 		Key:    []string{"nameWithOwner"},
 		Unique: true,
 	})
-}
-
-func (s *store) FindOne(nameWithOwner string) (*schema.Repo, error) {
-	sess, c := s.db.Collection(s.collection)
-	defer sess.Close()
-
-	var repo schema.Repo
-	if err := c.Find(bson.M{"nameWithOwner": nameWithOwner}).
-		One(&repo); err != nil {
-		return nil, err
-	}
-
-	return &repo, nil
 }
 
 func (s *store) FindAll(limit int, sort []string) ([]schema.Repo, error) {
@@ -416,165 +395,6 @@ func (s *store) Drop() error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 	return c.DropCollection()
-}
-
-func (s *store) WatchersFor(login string) (int64, error) {
-	sess, c := s.db.Collection(s.collection)
-	defer sess.Close()
-
-	pipeline := []bson.M{
-		bson.M{
-			"$match": bson.M{
-				"isFork": false,
-				"login":  login,
-			},
-		},
-		bson.M{
-			"$group": bson.M{
-				"_id":   "$login",
-				"count": bson.M{"$sum": "$stargazers"},
-			},
-		},
-		bson.M{
-			"$project": bson.M{
-				"login": "$_id.login",
-				"count": 1,
-			},
-		},
-	}
-	var watchers Watchers
-	if err := c.Pipe(pipeline).One(&watchers); err != nil {
-		if err == mgo.ErrNotFound {
-			return 0, nil
-		}
-		return 0, err
-	}
-	return watchers.Count, nil
-}
-
-func (s *store) StargazersFor(login string) (int64, error) {
-
-	sess, c := s.db.Collection(s.collection)
-	defer sess.Close()
-
-	pipeline := []bson.M{
-		bson.M{
-			"$match": bson.M{
-				"isFork": false,
-				"login":  login,
-			},
-		},
-		bson.M{
-			"$group": bson.M{
-				"_id":   "$login",
-				"count": bson.M{"$sum": "$watchers"},
-			},
-		},
-		bson.M{
-			"$project": bson.M{
-				"login": "$_id.login",
-				"count": 1,
-			},
-		},
-	}
-	var stargazers Stargazers
-	if err := c.Pipe(pipeline).One(&stargazers); err != nil {
-		if err == mgo.ErrNotFound {
-			return 0, nil
-		}
-		return 0, err
-	}
-	return stargazers.Count, nil
-}
-
-func (s *store) ForksFor(login string) (int64, error) {
-
-	sess, c := s.db.Collection(s.collection)
-	defer sess.Close()
-
-	pipeline := []bson.M{
-		bson.M{
-			"$match": bson.M{
-				"isFork": false,
-				"login":  login,
-			},
-		},
-		bson.M{
-			"$group": bson.M{
-				"_id":   "$login",
-				"count": bson.M{"$sum": "$forks"},
-			},
-		},
-		bson.M{
-			"$project": bson.M{
-				"login": "$_id.login",
-				"count": 1,
-			},
-		},
-	}
-	var forks Forks
-	if err := c.Pipe(pipeline).One(&forks); err != nil {
-		if err == mgo.ErrNotFound {
-			return 0, nil
-		}
-		return 0, err
-	}
-	return forks.Count, nil
-}
-
-func (s *store) KeywordsFor(login string, limit int) ([]schema.Keyword, error) {
-	sess, c := s.db.Collection(s.collection)
-	defer sess.Close()
-
-	job := &mgo.MapReduce{
-		Map: `function () {
-			var stopwords = ["i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now"]
-			var desc = this.description
-			if (desc) {
-				desc = desc.replace(/[^a-zA-Z ]/g, '') 
-				desc = desc.toLowerCase().split(' ')
-				desc = desc.filter(function (d) {
-					return !stopwords.includes(d)
-				})
-        for (var i = desc.length - 1; i >= 0; i--) {
-            // might want to remove punctuation, etc. here
-            if (desc[i])  {      // make sure there's something
-               emit(desc[i], 1); // store a 1 for each word
-            }
-        }
-			}
-		}`,
-		Reduce: `function (key, values) {
-			var count = 0
-			values.forEach(function (v) {
-				count += v
-			})
-			return count
-		}`,
-	}
-
-	var res []schema.Keyword
-	if _, err := c.Find(bson.M{
-		"login": login,
-	}).MapReduce(job, &res); err != nil {
-		return nil, err
-	}
-
-	if len(res) == 0 {
-		return res, nil
-	}
-
-	sort.SliceStable(res, func(i, j int) bool {
-		return res[i].Value > res[j].Value
-	})
-	return res[:min(len(res), 20)], nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // DistinctLogin returns a distinct login, so that we don't need to query the repository if the user does not exists

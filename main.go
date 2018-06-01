@@ -42,7 +42,7 @@ func init() {
 	viper.SetDefault("crontab_repo_trigger", false)                  // Will run once if set to true
 	viper.SetDefault("crontab_stat_trigger", false)                  // Will run once if set to true
 	viper.SetDefault("crontab_profile_trigger", false)               // Will run once if set to true
-	viper.SetDefault("crontab_match_trigger", true)                  // Will run once if set to true
+	viper.SetDefault("crontab_match_trigger", false)                 // Will run once if set to true
 	viper.SetDefault("db_user", "root")                              // The username of the database
 	viper.SetDefault("db_pass", "example")                           // The password of the database
 	viper.SetDefault("db_name", "scraper")                           // The name of the database
@@ -58,6 +58,7 @@ func init() {
 	viper.SetDefault("memprofile", "")                               // Write memoryprofile to file, e.g. mem.prof
 	viper.SetDefault("httpprofile", false)                           // Toggle state for http profiler
 	viper.SetDefault("graceful_timeout", 15)                         // The duration for which the server gracefully wait for existing connections to finish
+
 	if viper.GetString("github_token") == "" {
 		panic("github_token environment variable is missing")
 	}
@@ -98,7 +99,7 @@ func main() {
 		Github: github.New(httpClient,
 			viper.GetString("github_token"),
 			viper.GetString("github_uri"),
-			l),
+			l.Named("github")),
 		Repo: reposvc.New(db, l.Named("reposvc")),
 		User: usersvc.New(db, l.Named("usersvc")),
 	}

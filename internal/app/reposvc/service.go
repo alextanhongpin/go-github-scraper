@@ -28,10 +28,6 @@ type Service interface {
 	MostStars(ctx context.Context, limit int) ([]schema.Repo, error)
 	RepoCountByUser(ctx context.Context, limit int) ([]schema.UserCount, error)
 	ReposByLanguage(ctx context.Context, language string, limit int) ([]schema.UserCount, error)
-	WatchersFor(ctx context.Context, login string) (int64, error)
-	StargazersFor(ctx context.Context, login string) (int64, error)
-	ForksFor(ctx context.Context, login string) (int64, error)
-	KeywordsFor(ctx context.Context, login string, limit int) ([]schema.Keyword, error)
 	DistinctLogin(ctx context.Context) ([]string, error)
 	GetProfile(ctx context.Context, login string) usersvc.User
 }

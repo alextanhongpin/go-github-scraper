@@ -228,67 +228,6 @@ func (m *model) ReposByLanguage(ctx context.Context, language string, limit int)
 	return m.store.AggregateReposByLanguage(language, limit)
 }
 
-func (m *model) WatchersFor(ctx context.Context, login string) (count int64, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "WatchersFor"),
-				zap.Duration("took", time.Since(start)),
-				zap.String("for", login))
-		if err != nil {
-			zlog.Warn("error getting watchers for", zap.Error(err))
-		} else {
-			zlog.Info("got watchers for", zap.Int64("count", count))
-		}
-	}(time.Now())
-	return m.store.WatchersFor(login)
-}
-
-func (m *model) StargazersFor(ctx context.Context, login string) (count int64, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "StargazersFor"),
-				zap.Duration("took", time.Since(start)),
-				zap.String("login", login))
-		if err != nil {
-			zlog.Warn("error getting stargazers for", zap.Error(err))
-		} else {
-			zlog.Info("got stargazers for", zap.Int64("count", count))
-		}
-	}(time.Now())
-	return m.store.StargazersFor(login)
-}
-
-func (m *model) ForksFor(ctx context.Context, login string) (count int64, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "ForksFor"),
-				zap.Duration("took", time.Since(start)),
-				zap.String("login", login))
-		if err != nil {
-			zlog.Warn("error getting forks for", zap.Error(err))
-		} else {
-			zlog.Info("got forks for", zap.Int64("count", count))
-		}
-	}(time.Now())
-	return m.store.ForksFor(login)
-}
-
-func (m *model) KeywordsFor(ctx context.Context, login string, limit int) (res []schema.Keyword, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "KeywordsFor"),
-				zap.Duration("took", time.Since(start)),
-				zap.String("login", login),
-				zap.Int("limit", limit))
-		if err != nil {
-			zlog.Warn("error getting keywords for", zap.Error(err))
-		} else {
-			zlog.Info("got keywords for", zap.Int("count", len(res)))
-		}
-	}(time.Now())
-	return m.store.KeywordsFor(login, limit)
-}
-
 func (m *model) DistinctLogin(ctx context.Context) (res []string, err error) {
 	defer func(start time.Time) {
 		zlog := logger.Wrap(ctx, m.logger).
@@ -362,42 +301,4 @@ func (m *model) GetProfile(ctx context.Context, login string) (p usersvc.User) {
 			Languages:  languages,
 		},
 	}
-
-	// go func() {
-	// 	watchers, err = m.store.WatchersFor(login)
-	// 	if err != nil {
-	// 		zlog.Warn("error getting watcher count", zap.Error(err))
-	// 	}
-
-	// 	stargazers, err = m.store.StargazersFor(login)
-	// 	if err != nil {
-	// 		zlog.Warn("error getting stargazer count", zap.Error(err))
-	// 	}
-
-	// 	forks, err = m.store.ForksFor(login)
-	// 	if err != nil {
-	// 		zlog.Warn("error getting fork count", zap.Error(err))
-	// 	}
-
-	// 	keywords, err = m.store.KeywordsFor(login, 20)
-	// 	if err != nil {
-	// 		zlog.Warn("error getting keyword count", zap.Error(err))
-	// 	}
-
-	// 	languages, err = m.store.AggregateLanguageByUser(login, 20)
-	// 	if err != nil {
-	// 		zlog.Warn("error fetching language count repos", zap.Error(err))
-	// 	}
-
-	// 	ch <- usersvc.User{
-	// 		Login: login,
-	// 		Profile: schema.Profile{
-	// 			Watchers:   watchers,
-	// 			Stargazers: stargazers,
-	// 			Forks:      forks,
-	// 			Keywords:   keywords,
-	// 			Languages:  languages,
-	// 		}}
-	// }()
-	// p = <-ch
 }
