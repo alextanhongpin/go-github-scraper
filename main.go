@@ -42,7 +42,7 @@ func init() {
 	viper.SetDefault("crontab_repo_trigger", false)                  // Will run once if set to true
 	viper.SetDefault("crontab_stat_trigger", false)                  // Will run once if set to true
 	viper.SetDefault("crontab_profile_trigger", false)               // Will run once if set to true
-	viper.SetDefault("crontab_match_trigger", true)                  // Will run once if set to true
+	viper.SetDefault("crontab_match_trigger", false)                 // Will run once if set to true
 	viper.SetDefault("db_user", "root")                              // The username of the database
 	viper.SetDefault("db_pass", "example")                           // The password of the database
 	viper.SetDefault("db_name", "scraper")                           // The name of the database
@@ -53,7 +53,7 @@ func init() {
 	viper.SetDefault("github_uri", "https://api.github.com/graphql") // The Github's GraphQL Endpoint
 	viper.SetDefault("port", ":8080")                                // The TCP port of the application
 	viper.SetDefault("pprof_port", ":6060")                          // The TCP port of for the http profiling
-	viper.SetDefault("pprof_enable", true)                           // Toggle flag for pprof
+	viper.SetDefault("pprof_enable", false)                          // Toggle flag for pprof
 	viper.SetDefault("cpuprofile", "")                               // Write cpuprofile to file, e.g. cpu.prof
 	viper.SetDefault("memprofile", "")                               // Write memoryprofile to file, e.g. mem.prof
 	viper.SetDefault("httpprofile", false)                           // Toggle state for http profiler

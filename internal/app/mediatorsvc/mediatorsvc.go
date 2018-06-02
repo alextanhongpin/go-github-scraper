@@ -5,7 +5,6 @@ package mediatorsvc
 import (
 	"context"
 	"math"
-	"sort"
 	"sync"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/alextanhongpin/go-github-scraper/internal/app/statsvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/usersvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/heapsort"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/moment"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
@@ -493,18 +493,31 @@ func (m *model) UpdateMatches(ctx context.Context) (err error) {
 				continue
 			}
 
-			matches = append(matches, schema.User{
-				Login:     p2.Login,
-				AvatarURL: p2.AvatarURL,
-				Score:     recsys(p1, p2),
-			})
+			score := recsys(p1, p2)
 
-			if len(matches) > maxMatches*2 {
-				sort.SliceStable(matches, func(i, j int) bool {
-					return matches[i].Score > matches[j].Score
+			if len(matches) > maxMatches {
+				if score > matches[0].Score {
+					matches = append(matches[1:], schema.User{
+						Login:     p2.Login,
+						AvatarURL: p2.AvatarURL,
+						Score:     score,
+					})
+					heapsort.Sort(matches)
+				}
+			} else {
+				matches = append(matches, schema.User{
+					Login:     p2.Login,
+					AvatarURL: p2.AvatarURL,
+					Score:     score,
 				})
-				matches = matches[:maxMatches]
 			}
+
+			// if len(matches) > maxMatches*2 {
+			// 	sort.SliceStable(matches, func(i, j int) bool {
+			// 		return matches[i].Score > matches[j].Score
+			// 	})
+			// 	matches = matches[:maxMatches]
+			// }
 		}
 		users[i].Profile.Matches = matches[:take(len(matches), maxMatches)]
 	}

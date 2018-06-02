@@ -14,11 +14,12 @@ include .env
 start:
 	GITHUB_TOKEN=${GITHUB_TOKEN} DB_NAME=${DB_NAME} DB_HOST=${DB_HOST} DB_USER=${DB_USER} DB_PASS=${DB_PASS} go run main.go
 
-alloc:
-	@go tool pprof -alloc_space -svg http://localhost:6060/debug/pprof/heap > heap.svg
+mem:
+	@go tool pprof --alloc_space http://localhost:6060/debug/pprof/heap
 
-heap:
-	@go tool pprof -png http://localhost:6060/debug/pprof/heap > out.png
+# Collect a 30-seconds cpu profiling
+cpu:
+	go tool pprof  http://localhost:6060:/debug/pprof/profile
 
 docker:
 	@docker build -t ${REPO} --build-arg VERSION="${VERSION}" \
