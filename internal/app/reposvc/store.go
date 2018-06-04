@@ -303,7 +303,7 @@ func (s *store) AggregateMostRecentReposByLanguage(language string, limit int) (
 				"description":   1,
 				"languages":     1,
 				"homepageUrl":   1,
-				"forkCount":     1,
+				"forks":         1,
 				"isFork":        1,
 				"nameWithOwner": 1,
 				"login":         1,

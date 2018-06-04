@@ -12,6 +12,7 @@ import (
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/constant"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
+
 	"go.uber.org/zap"
 )
 
@@ -111,6 +112,8 @@ func (m *model) FindLastCreatedByUser(ctx context.Context, login string) (date s
 	if err != nil {
 		return constant.GithubCreatedAt, false
 	}
+	// Deduct a day
+	t = t.AddDate(0, -1, 0)
 	return t.Format("2006-01-02"), true
 }
 
@@ -208,7 +211,7 @@ func (m *model) MostForks(ctx context.Context, limit int) (res []schema.Repo, er
 			zlog.Info("got repos with most forks", zap.Int("count", len(res)))
 		}
 	}(time.Now())
-	return m.store.FindAll(limit, []string{"-forkCount"})
+	return m.store.FindAll(limit, []string{"-forks"})
 }
 
 // RepoCountByUser returns the users with most repos sorted in descending order
@@ -286,7 +289,7 @@ func (m *model) GetProfile(ctx context.Context, login string) (p usersvc.User) {
 
 		stargazers += repo.Stargazers
 		watchers += repo.Watchers
-		forks += repo.ForkCount
+		forks += repo.Forks
 		languageList = append(languageList, repo.Languages...)
 		descriptions = append(descriptions, repo.Description)
 	}

@@ -9,7 +9,7 @@ type Repo struct {
 	Description   string   `json:"description" bson:"description,omitempty"`
 	Languages     []string `json:"languages" bson:"languages,omitempty"`
 	HomepageURL   string   `json:"homepageUrl" bson:"homepageUrl,omitempty"`
-	ForkCount     int64    `json:"forkCount" bson:"forkCount,omitempty"` // TODO: Change this to `forks``
+	Forks         int64    `json:"forks" bson:"forks,omitempty"`
 	IsFork        bool     `json:"isFork" bson:"isFork,omitempty"`
 	NameWithOwner string   `json:"nameWithOwner" bson:"nameWithOwner,omitempty"`
 	Login         string   `json:"login" bson:"login,omitempty"`

@@ -15,7 +15,7 @@ type Repo struct {
 	Description   string     `json:"description,omitempty" bson:"description,omitempty"`
 	Languages     Language   `json:"languages,omitempty" bson:"languages,omitempty"`
 	HomepageURL   string     `json:"homepageUrl,omitempty" bson:"homepageUrl,omitempty"`
-	ForkCount     int64      `json:"forkCount,omitempty" bson:"forkCount,omitempty"`
+	ForkCount     int64      `json:"forkCount,omitempty" bson:"forks,omitempty"`
 	IsFork        bool       `json:"isFork,omitempty" bson:"isFork,omitempty"`
 	NameWithOwner string     `json:"nameWithOwner,omitempty" bson:"nameWithOwner,omitempty"`
 	Owner         Owner      `json:"owner,omitempty" bson:"owner,omitempty"`

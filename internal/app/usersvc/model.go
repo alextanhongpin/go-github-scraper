@@ -118,6 +118,7 @@ func (m *model) FindLastCreated(ctx context.Context) (lastCreated string, ok boo
 	if err != nil {
 		return constant.GithubCreatedAt, false
 	}
+	t = t.AddDate(0, -1, 0)
 	return t.Format("2006-01-02"), true
 }
 

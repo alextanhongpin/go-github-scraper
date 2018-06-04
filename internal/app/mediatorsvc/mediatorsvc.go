@@ -13,6 +13,7 @@ import (
 	"github.com/alextanhongpin/go-github-scraper/internal/app/statsvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/app/usersvc"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/constant"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/heapsort"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/moment"
@@ -25,7 +26,7 @@ type (
 	// Service represents the methods the mediator service must implement
 	Service interface {
 		FetchUsers(ctx context.Context, location string, months int, perPage int) error
-		FetchRepos(ctx context.Context, userPerPage, repoPerPage int) error
+		FetchRepos(ctx context.Context, userPerPage, repoPerPage int, reset bool) error
 		UpdateUserCount(ctx context.Context) error
 		UpdateRepoCount(ctx context.Context) error
 		UpdateReposMostRecent(ctx context.Context, perPage int) error
@@ -106,7 +107,7 @@ func (m *model) FetchUsers(ctx context.Context, location string, months int, per
 	return
 }
 
-func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int) (err error) {
+func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int, reset bool) (err error) {
 	var users []usersvc.User
 	var repos []github.Repo
 	defer func(s time.Time) {
@@ -135,7 +136,12 @@ func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int) (e
 			continue
 		}
 
-		start, _ := m.Repo.FindLastCreatedByUser(ctx, login)
+		var start string
+		if reset {
+			start = constant.GithubCreatedAt
+		} else {
+			start, _ = m.Repo.FindLastCreatedByUser(ctx, login)
+		}
 		end := moment.NewCurrentFormattedDate()
 
 		repos, err = m.Github.FetchReposCursor(ctx, login, start, end, repoPerPage)

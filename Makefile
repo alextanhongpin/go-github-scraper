@@ -7,7 +7,7 @@ VCS_REF := $(shell git log -1 --pretty=%h)
 NAME := $(shell basename `git rev-parse --show-toplevel`)
 VENDOR := $(shell whoami)
 
-SEMVER_VERSION := 1.0.7
+SEMVER_VERSION := 1.0.8
 
 include .env
 
