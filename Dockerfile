@@ -1,16 +1,29 @@
 FROM golang:1.10.2 as builder
 
+WORKDIR /go/src
+
+# Copy vendor folder to avoid re-downloading the whole packages again
+COPY vendor/ .
+
 WORKDIR /go/src/github.com/alextanhongpin/go-github-scraper
 
-COPY main.go .
+COPY main.go go.mod .
 
 # Additionally copy the internal folder, since this is not a package
+# and will not be fetched from Github
 COPY internal/ internal/
 
-RUN go get -d -v
+# COPY vendor/ vendor/
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
+# RUN go version
+# RUN go version && go get -u -v golang.org/x/vgo
 
+# RUN vgo get ./...
+
+# Uncomment to pull packages every time
+# RUN go get -d -v
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o app .
 
 FROM alpine:latest  
 RUN apk --no-cache add ca-certificates

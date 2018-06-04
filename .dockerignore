@@ -1,3 +1,5 @@
 **
 !main.go
 !internal/
+!vendor/
+!go.mod

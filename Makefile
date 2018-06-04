@@ -36,5 +36,5 @@ push:
 	@docker push ${REPO}:latest
 	@docker push ${REPO}:${SEMVER_VERSION}
 
-deploy:
+production:
 	make docker && make tag && make push

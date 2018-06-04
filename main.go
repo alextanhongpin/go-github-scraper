@@ -29,7 +29,7 @@ import (
 func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("crontab_user_tab", "*/20 * * * * *")           // The crontab for user, running every 20 seconds
-	viper.SetDefault("reset_repo", true)                             // Whether to fetch it from scratch or not
+	viper.SetDefault("reset_repo", false)                            // Whether to fetch it from scratch or not
 	viper.SetDefault("crontab_repo_tab", "0 * * * * *")              // The crontab for repo, running every minute
 	viper.SetDefault("crontab_stat_tab", "0 10 0 * * *")             // The crontab for stat, running ten minutes after midnight
 	viper.SetDefault("crontab_profile_tab", "@midnight")             // The crontab for profile, running at midnight
@@ -40,7 +40,7 @@ func init() {
 	viper.SetDefault("crontab_profile_enable", false)                // The enable state of the crontab for profile
 	viper.SetDefault("crontab_match_enable", false)                  // The enable state of the crontab for profile
 	viper.SetDefault("crontab_user_trigger", false)                  // Will run once if set to true
-	viper.SetDefault("crontab_repo_trigger", true)                   // Will run once if set to true
+	viper.SetDefault("crontab_repo_trigger", false)                  // Will run once if set to true
 	viper.SetDefault("crontab_stat_trigger", false)                  // Will run once if set to true
 	viper.SetDefault("crontab_profile_trigger", false)               // Will run once if set to true
 	viper.SetDefault("crontab_match_trigger", false)                 // Will run once if set to true
