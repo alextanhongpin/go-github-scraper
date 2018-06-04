@@ -5,6 +5,7 @@ import (
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/database"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/moment"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/partitioner"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
 
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -13,18 +14,21 @@ import (
 // Store provides the interface for the Service struct
 type (
 	Store interface {
+		AggregateCompany(min, max int) ([]schema.Company, error)
 		BulkUpsert(users []github.User) error
 		BulkUpdate(users []User) error
 		Count() (int, error)
 		Drop() error
-		FindOne(login string) (*User, error)
 		FindAll(limit int, sort []string) ([]User, error)
+		FindByCompany(company string) ([]schema.User, error)
 		FindLastCreated() (*User, error)
+		FindOne(login string) (*User, error)
 		Init() error
 		PickLogin() ([]string, error)
 		UpdateOne(login string) error
 		Upsert(github.User) error
 		WithRepos(count int) ([]User, error)
+		DistinctCompany() ([]string, error)
 	}
 
 	// store is a struct that holds service configuration
@@ -74,6 +78,20 @@ func (s *store) FindAll(limit int, sort []string) ([]User, error) {
 	if err := c.Find(bson.M{}).
 		Sort(sort...).
 		Limit(limit).
+		All(&users); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (s *store) FindByCompany(company string) ([]schema.User, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	var users []schema.User
+	if err := c.Find(bson.M{
+		"company": company,
+	}).
 		All(&users); err != nil {
 		return nil, err
 	}
@@ -234,4 +252,65 @@ func (s *store) WithRepos(count int) ([]User, error) {
 	}
 
 	return users, nil
+}
+
+func (s *store) DistinctCompany() ([]string, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var res []string
+	if err := c.Find(nil).Distinct("company", &res); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (s *store) AggregateCompany(min, max int) ([]schema.Company, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	pipeline := []bson.M{
+		bson.M{
+			"$match": bson.M{
+				"company": bson.M{
+					"$exists": true,
+					"$nin":    []string{"-", "none", "None", ""}, // NOTE: Excluding empty strings does not work
+					"$ne":     "",
+				},
+			},
+		},
+		bson.M{
+			"$group": bson.M{
+				"_id": bson.M{
+					"company": "$company",
+				},
+				"count": bson.M{"$sum": 1},
+			},
+		},
+		bson.M{
+			"$sort": bson.M{
+				// Sort in descending order (highest to lowest)
+				"count": -1,
+			},
+		},
+		bson.M{
+			"$match": bson.M{
+				"count": bson.M{
+					"$lt":  max,
+					"$gte": min,
+				},
+			},
+		},
+		bson.M{
+			"$project": bson.M{
+				"count":   1,
+				"company": "$_id.company",
+				"_id":     0,
+			},
+		},
+	}
+	var companies []schema.Company
+	if err := c.Pipe(pipeline).All(&companies); err != nil {
+		return nil, err
+	}
+	return companies, nil
 }

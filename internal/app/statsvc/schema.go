@@ -43,6 +43,13 @@ type ReposMostStars struct {
 	Repos    []schema.Repo `json:"repos,omitempty" bson:"repos,omitempty"`
 }
 
+// ReposMostForks represents the repos with most forks analytics result
+type ReposMostForks struct {
+	Type     string `json:"type,omitempty" bson:"type,omitempty"`
+	DateInfo `bson:",inline"`
+	Repos    []schema.Repo `json:"repos,omitempty" bson:"repos,omitempty"`
+}
+
 // MostPopularLanguage represents the languages and the corresponding repo count analytics result
 type MostPopularLanguage struct {
 	Type      string `json:"type,omitempty" bson:"type,omitempty"`
@@ -74,4 +81,18 @@ type ReposByLanguage struct {
 // IndexResponse represents the response returned when the "/stats" route is called
 type IndexResponse struct {
 	Paths []string `json:"paths,omitempty"`
+}
+
+// CompanyCount represents the company count analytics result
+type CompanyCount struct {
+	Type     string `json:"type,omitempty" bson:"type,omitempty"`
+	DateInfo `bson:",inline"`
+	Count    int `json:"count,omitempty" bson:"count,omitempty"`
+}
+
+// UsersByCompany represents the users by company analytic result
+type UsersByCompany struct {
+	Type     string `json:"type,omitempty" bson:"type,omitempty"`
+	DateInfo `bson:",inline"`
+	Users    []schema.Company `json:"users,omitempty" bson:"users,omitempty"`
 }

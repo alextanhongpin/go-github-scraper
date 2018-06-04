@@ -8,6 +8,7 @@ import (
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/constant"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
 	"go.uber.org/zap"
 )
 
@@ -120,6 +121,21 @@ func (m *model) FindLastCreated(ctx context.Context) (lastCreated string, ok boo
 	return t.Format("2006-01-02"), true
 }
 
+func (m *model) FindByCompany(ctx context.Context, company string) (res []schema.User, err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "FindByCompany"),
+				zap.Duration("took", time.Since(start)),
+				zap.String("company", company))
+		if err != nil {
+			zlog.Warn("error finding users by company", zap.Error(err))
+		} else {
+			zlog.Info("get users by company", zap.Int("count", len(res)))
+		}
+	}(time.Now())
+	return m.store.FindByCompany(company)
+}
+
 func (m *model) FindLastFetched(ctx context.Context, limit int) (res []User, err error) {
 	defer func(start time.Time) {
 		zlog := logger.Wrap(ctx, m.logger).
@@ -206,4 +222,34 @@ func (m *model) WithRepos(ctx context.Context, count int) (users []User, err err
 		}
 	}(time.Now())
 	return m.store.WithRepos(count)
+}
+
+func (m *model) AggregateCompany(ctx context.Context, min, max int) (companies []schema.Company, err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "AggregateCompany"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("min", min),
+				zap.Int("max", max))
+		if err != nil {
+			zlog.Warn("error getting companies", zap.Error(err))
+		} else {
+			zlog.Info("get companies", zap.Int("count", len(companies)))
+		}
+	}(time.Now())
+	return m.store.AggregateCompany(min, max)
+}
+
+func (m *model) DistinctCompany(ctx context.Context) (companies []string, err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "DistinctCompany"),
+				zap.Duration("took", time.Since(start)))
+		if err != nil {
+			zlog.Warn("error getting distinct companies", zap.Error(err))
+		} else {
+			zlog.Info("get distinct companies", zap.Int("count", len(companies)))
+		}
+	}(time.Now())
+	return m.store.DistinctCompany()
 }

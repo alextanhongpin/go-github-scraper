@@ -26,6 +26,7 @@ type Service interface {
 	MostRecent(ctx context.Context, limit int) ([]schema.Repo, error)
 	MostRecentReposByLanguage(ctx context.Context, language string, limit int) ([]schema.Repo, error)
 	MostStars(ctx context.Context, limit int) ([]schema.Repo, error)
+	MostForks(ctx context.Context, limit int) ([]schema.Repo, error)
 	RepoCountByUser(ctx context.Context, limit int) ([]schema.UserCount, error)
 	ReposByLanguage(ctx context.Context, language string, limit int) ([]schema.UserCount, error)
 	DistinctLogin(ctx context.Context) ([]string, error)

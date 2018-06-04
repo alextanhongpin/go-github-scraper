@@ -7,7 +7,7 @@ VCS_REF := $(shell git log -1 --pretty=%h)
 NAME := $(shell basename `git rev-parse --show-toplevel`)
 VENDOR := $(shell whoami)
 
-SEMVER_VERSION := 1.0.5
+SEMVER_VERSION := 1.0.7
 
 include .env
 
@@ -35,3 +35,6 @@ tag:
 push: 
 	@docker push ${REPO}:latest
 	@docker push ${REPO}:${SEMVER_VERSION}
+
+deploy:
+	make docker && make tag && make push

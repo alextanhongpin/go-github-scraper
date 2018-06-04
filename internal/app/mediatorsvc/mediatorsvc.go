@@ -4,6 +4,7 @@ package mediatorsvc
 
 import (
 	"context"
+	"log"
 	"math"
 	"sync"
 	"time"
@@ -30,11 +31,14 @@ type (
 		UpdateReposMostRecent(ctx context.Context, perPage int) error
 		UpdateRepoCountByUser(ctx context.Context, perPage int) error
 		UpdateReposMostStars(ctx context.Context, perPage int) error
+		UpdateReposMostForks(ctx context.Context, perPage int) error
 		UpdateLanguagesMostPopular(ctx context.Context, perPage int) error
 		UpdateMostRecentReposByLanguage(ctx context.Context, perPage int) error
 		UpdateReposByLanguage(ctx context.Context, perPage int) error
 		UpdateProfile(ctx context.Context, numWorkers int) error
 		UpdateMatches(ctx context.Context) error
+		UpdateUsersByCompany(ctx context.Context, min, max int) error
+		UpdateCompanyCount(ctx context.Context) error
 	}
 
 	// Mediator holds the services in used
@@ -276,6 +280,32 @@ func (m *model) UpdateReposMostStars(ctx context.Context, perPage int) (err erro
 	return
 }
 
+// UpdateReposMostForks updates the analytic type `repos_most_forks`
+func (m *model) UpdateReposMostForks(ctx context.Context, perPage int) (err error) {
+	var repos []schema.Repo
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "UpdateReposMostForks"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("perPage", perPage))
+		if err != nil {
+			zlog.Warn("error updating repos most forks", zap.Error(err))
+		} else {
+			zlog.Info("update repos most forks", zap.Int("count", len(repos)))
+		}
+	}(time.Now())
+
+	repos, err = m.Repo.MostForks(ctx, perPage)
+	if err != nil {
+		return
+	}
+
+	if err = m.Stat.PostReposMostForks(ctx, repos); err != nil {
+		return
+	}
+	return
+}
+
 // UpdateLanguagesMostPopular updates the analytic type `languages_most_popular`
 func (m *model) UpdateLanguagesMostPopular(ctx context.Context, perPage int) (err error) {
 	var languages []schema.LanguageCount
@@ -511,13 +541,6 @@ func (m *model) UpdateMatches(ctx context.Context) (err error) {
 					Score:     score,
 				})
 			}
-
-			// if len(matches) > maxMatches*2 {
-			// 	sort.SliceStable(matches, func(i, j int) bool {
-			// 		return matches[i].Score > matches[j].Score
-			// 	})
-			// 	matches = matches[:maxMatches]
-			// }
 		}
 		users[i].Profile.Matches = matches[:take(len(matches), maxMatches)]
 	}
@@ -596,4 +619,62 @@ func recsys(user1, user2 usersvc.User) (score float64) {
 		}
 	}
 	return 1 / (1 + math.Sqrt(sumSquares))
+}
+
+func (m *model) UpdateCompanyCount(ctx context.Context) (err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "UpdateCompanyCount"),
+				zap.Duration("took", time.Since(start)))
+		if err != nil {
+			zlog.Warn("error updating company count", zap.Error(err))
+		} else {
+			zlog.Info("update company count")
+		}
+	}(time.Now())
+
+	var res []string
+	res, err = m.User.DistinctCompany(ctx)
+	if err != nil {
+		return
+	}
+
+	if err = m.Stat.PostCompanyCount(ctx, len(res)); err != nil {
+		return
+	}
+
+	return
+}
+
+func (m *model) UpdateUsersByCompany(ctx context.Context, min, max int) (err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "UpdateUsersByCompany"),
+				zap.Duration("took", time.Since(start)))
+		if err != nil {
+			zlog.Warn("error updating users by company", zap.Error(err))
+		} else {
+			zlog.Info("update users by company")
+		}
+	}(time.Now())
+
+	companies, err := m.User.AggregateCompany(ctx, min, max)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < len(companies); i++ {
+		res, err := m.User.FindByCompany(ctx, companies[i].Company)
+		if err != nil {
+			continue
+		}
+		companies[i].Users = res
+	}
+
+	log.Printf("schema: %+v", companies[0])
+	if err = m.Stat.PostUsersByCompany(ctx, companies); err != nil {
+		return
+	}
+
+	return
 }

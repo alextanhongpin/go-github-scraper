@@ -187,6 +187,34 @@ func (m *model) PostReposMostStars(ctx context.Context, repos []schema.Repo) (er
 	return m.store.PostReposMostStars(repos)
 }
 
+func (m *model) GetReposMostForks(ctx context.Context) (res *ReposMostForks, err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "GetReposMostForks"),
+				zap.Duration("took", time.Since(start)))
+		if err != nil {
+			zlog.Error("error getting repos most forks", zap.Error(err))
+		} else {
+			zlog.Info("get repos most forks")
+		}
+	}(time.Now())
+	return m.store.GetReposMostForks()
+}
+
+func (m *model) PostReposMostForks(ctx context.Context, repos []schema.Repo) (err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "PostReposMostForks"),
+				zap.Duration("took", time.Since(start)))
+		if err != nil {
+			zlog.Error("error posting repos most forks", zap.Error(err))
+		} else {
+			zlog.Info("post repos most forks")
+		}
+	}(time.Now())
+	return m.store.PostReposMostForks(repos)
+}
+
 func (m *model) GetMostPopularLanguage(ctx context.Context) (res *MostPopularLanguage, err error) {
 	defer func(start time.Time) {
 		zlog := logger.Wrap(ctx, m.logger).
@@ -297,4 +325,63 @@ func (m *model) PostReposByLanguage(ctx context.Context, users []schema.UserCoun
 		}
 	}(time.Now())
 	return m.store.PostReposByLanguage(users)
+}
+
+func (m *model) GetCompanyCount(ctx context.Context) (res *CompanyCount, err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "GetCompanyCount"),
+				zap.Duration("took", time.Since(start)))
+		if err != nil {
+			zlog.Error("error getting company count", zap.Error(err))
+		} else {
+			zlog.Info("get company count",
+				zap.Int("count", res.Count))
+		}
+	}(time.Now())
+	return m.store.GetCompanyCount()
+}
+
+func (m *model) PostCompanyCount(ctx context.Context, count int) (err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "PostCompanyCount"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("count", count))
+		if err != nil {
+			zlog.Error("error posting company count", zap.Error(err))
+		} else {
+			zlog.Info("post company count")
+		}
+	}(time.Now())
+	return m.store.PostCompanyCount(count)
+}
+
+func (m *model) GetUsersByCompany(ctx context.Context) (res *UsersByCompany, err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "GetUsersByCompany"),
+				zap.Duration("took", time.Since(start)))
+		if err != nil {
+			zlog.Error("error getting users by company", zap.Error(err))
+		} else {
+			zlog.Info("get users by company")
+		}
+	}(time.Now())
+	return m.store.GetUsersByCompany()
+}
+
+func (m *model) PostUsersByCompany(ctx context.Context, users []schema.Company) (err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "PostUsersByCompany"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("count", len(users)))
+		if err != nil {
+			zlog.Error("error posting users by company", zap.Error(err))
+		} else {
+			zlog.Info("post users by company")
+		}
+	}(time.Now())
+	return m.store.PostUsersByCompany(users)
 }

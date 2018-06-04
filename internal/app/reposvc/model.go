@@ -195,6 +195,22 @@ func (m *model) MostStars(ctx context.Context, limit int) (res []schema.Repo, er
 	return m.store.FindAll(limit, []string{"-stargazers"})
 }
 
+// MostForks returns a limited results of repos with the most forks
+func (m *model) MostForks(ctx context.Context, limit int) (res []schema.Repo, err error) {
+	defer func(start time.Time) {
+		zlog := logger.Wrap(ctx, m.logger).
+			With(zap.String("method", "MostForks"),
+				zap.Duration("took", time.Since(start)),
+				zap.Int("limit", limit))
+		if err != nil {
+			zlog.Warn("error getting repos with most forks", zap.Error(err))
+		} else {
+			zlog.Info("got repos with most forks", zap.Int("count", len(res)))
+		}
+	}(time.Now())
+	return m.store.FindAll(limit, []string{"-forkCount"})
+}
+
 // RepoCountByUser returns the users with most repos sorted in descending order
 func (m *model) RepoCountByUser(ctx context.Context, limit int) (res []schema.UserCount, err error) {
 	defer func(start time.Time) {

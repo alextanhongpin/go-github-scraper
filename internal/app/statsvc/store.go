@@ -27,6 +27,8 @@ type (
 		PostRepoCountByUser(repos []schema.UserCount) error
 		GetReposMostStars() (*ReposMostStars, error)
 		PostReposMostStars(repos []schema.Repo) error
+		GetReposMostForks() (*ReposMostForks, error)
+		PostReposMostForks(repos []schema.Repo) error
 		GetMostPopularLanguage() (*MostPopularLanguage, error)
 		PostMostPopularLanguage(languages []schema.LanguageCount) error
 		GetLanguageCountByUser() (*LanguageCountByUser, error)
@@ -35,6 +37,10 @@ type (
 		PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error
 		GetReposByLanguage() (*ReposByLanguage, error)
 		PostReposByLanguage(users []schema.UserCountByLanguage) error
+		GetCompanyCount() (*CompanyCount, error)
+		PostCompanyCount(count int) error
+		GetUsersByCompany() (*UsersByCompany, error)
+		PostUsersByCompany(users []schema.Company) error
 	}
 
 	store struct {
@@ -166,6 +172,27 @@ func (s *store) PostReposMostStars(repos []schema.Repo) error {
 	})
 }
 
+func (s *store) GetReposMostForks() (*ReposMostForks, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var res ReposMostForks
+	if err := c.
+		Find(bson.M{"type": EnumReposMostForks}).
+		One(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (s *store) PostReposMostForks(repos []schema.Repo) error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	return upsert(c, EnumReposMostForks, bson.M{
+		"repos":     repos,
+		"updatedAt": moment.NewUTCDate(),
+	})
+}
+
 func (s *store) GetMostPopularLanguage() (*MostPopularLanguage, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
@@ -263,4 +290,47 @@ func upsert(c *mgo.Collection, enum string, data bson.M) error {
 		return err
 	}
 	return nil
+}
+
+func (s *store) GetCompanyCount() (*CompanyCount, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var res CompanyCount
+	if err := c.
+		Find(bson.M{"type": EnumCompanyCount}).
+		One(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (s *store) PostCompanyCount(count int) error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	return upsert(c, EnumCompanyCount, bson.M{
+		"count":     count,
+		"updatedAt": moment.NewUTCDate(),
+	})
+}
+
+func (s *store) GetUsersByCompany() (*UsersByCompany, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	var res UsersByCompany
+	if err := c.
+		Find(bson.M{"type": EnumUsersByCompany}).
+		One(&res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (s *store) PostUsersByCompany(users []schema.Company) error {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+	return upsert(c, EnumUsersByCompany, bson.M{
+		"users":     users,
+		"updatedAt": moment.NewUTCDate(),
+	})
 }

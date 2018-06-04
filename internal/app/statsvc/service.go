@@ -21,6 +21,8 @@ type Service interface {
 	PostRepoCountByUser(ctx context.Context, users []schema.UserCount) error
 	GetReposMostStars(ctx context.Context) (*ReposMostStars, error)
 	PostReposMostStars(ctx context.Context, repos []schema.Repo) error
+	GetReposMostForks(ctx context.Context) (*ReposMostForks, error)
+	PostReposMostForks(ctx context.Context, repos []schema.Repo) error
 	GetMostPopularLanguage(ctx context.Context) (*MostPopularLanguage, error)
 	PostMostPopularLanguage(ctx context.Context, languages []schema.LanguageCount) error
 	GetLanguageCountByUser(ctx context.Context) (*LanguageCountByUser, error)
@@ -29,6 +31,10 @@ type Service interface {
 	PostMostRecentReposByLanguage(ctx context.Context, repos []schema.RepoLanguage) error
 	GetReposByLanguage(ctx context.Context) (*ReposByLanguage, error)
 	PostReposByLanguage(ctx context.Context, users []schema.UserCountByLanguage) error
+	GetCompanyCount(ctx context.Context) (*CompanyCount, error)
+	PostCompanyCount(ctx context.Context, count int) error
+	GetUsersByCompany(ctx context.Context) (*UsersByCompany, error)
+	PostUsersByCompany(ctx context.Context, users []schema.Company) error
 }
 
 // New returns a new analytic service model

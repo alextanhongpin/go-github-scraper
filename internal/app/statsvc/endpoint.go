@@ -33,7 +33,6 @@ func (e *endpoints) GetStats() httprouter.Handle {
 		switch r.URL.Query().Get("type") {
 		case EnumUserCount:
 			res, err = e.svc.GetUserCount(ctx)
-
 		case EnumRepoCount:
 			res, err = e.svc.GetRepoCount(ctx)
 		case EnumReposMostRecent:
@@ -42,23 +41,32 @@ func (e *endpoints) GetStats() httprouter.Handle {
 			res, err = e.svc.GetRepoCountByUser(ctx)
 		case EnumReposMostStars:
 			res, err = e.svc.GetReposMostStars(ctx)
+		case EnumReposMostForks:
+			res, err = e.svc.GetReposMostForks(ctx)
 		case EnumMostPopularLanguage:
 			res, err = e.svc.GetMostPopularLanguage(ctx)
 		case EnumMostRecentReposByLanguage:
 			res, err = e.svc.GetMostRecentReposByLanguage(ctx)
 		case EnumReposByLanguage:
 			res, err = e.svc.GetReposByLanguage(ctx)
+		case EnumCompanyCount:
+			res, err = e.svc.GetCompanyCount(ctx)
+		case EnumUsersByCompany:
+			res, err = e.svc.GetUsersByCompany(ctx)
 		default:
 			res = IndexResponse{
 				Paths: []string{
 					"/stats?type=user_count",
 					"/stats?type=repo_count",
-					"/stats?type=repos_most_recent",             // v1/analytics?type=leaderboard_last_updated_repos
-					"/stats?type=repo_count_by_user",            // analytics?type=leaderboard_most_repos
-					"/stats?type=repos_most_stars",              // v1/analytics?type=leaderboard_most_stars_repos
-					"/stats?type=languages_most_popular",        // leaderboard_languages
-					"/stats?type=repos_most_recent_by_language", //
-					"/stats?type=repos_by_language",             // leaderboard_most_repos_by_language
+					"/stats?type=company_count",
+					"/stats?type=repos_most_recent",
+					"/stats?type=repo_count_by_user",
+					"/stats?type=repos_most_stars",
+					"/stats?type=repos_most_forks",
+					"/stats?type=users_by_company",
+					"/stats?type=languages_most_popular",
+					"/stats?type=repos_most_recent_by_language",
+					"/stats?type=repos_by_language",
 				},
 			}
 		}

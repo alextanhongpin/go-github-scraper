@@ -157,6 +157,8 @@ func main() {
 			Fn: func(ctx context.Context) error {
 				ctx = logger.WrapContextWithRequestID(ctx)
 				defaultLimit := 20
+				min := 3
+				max := 100
 
 				nullFns := []null.Fn{
 					func() error { return msvc.UpdateUserCount(ctx) },
@@ -164,9 +166,12 @@ func main() {
 					func() error { return msvc.UpdateReposMostRecent(ctx, defaultLimit) },
 					func() error { return msvc.UpdateRepoCountByUser(ctx, defaultLimit) },
 					func() error { return msvc.UpdateReposMostStars(ctx, defaultLimit) },
+					func() error { return msvc.UpdateReposMostForks(ctx, defaultLimit) },
 					func() error { return msvc.UpdateLanguagesMostPopular(ctx, defaultLimit) },
 					func() error { return msvc.UpdateMostRecentReposByLanguage(ctx, defaultLimit) },
 					func() error { return msvc.UpdateReposByLanguage(ctx, defaultLimit) },
+					func() error { return msvc.UpdateCompanyCount(ctx) },
+					func() error { return msvc.UpdateUsersByCompany(ctx, min, max) },
 				}
 				var wg sync.WaitGroup
 				wg.Add(len(nullFns))
