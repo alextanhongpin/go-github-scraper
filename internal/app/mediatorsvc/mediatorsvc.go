@@ -44,11 +44,10 @@ type (
 
 	// Mediator holds the services in used
 	Mediator struct {
-		Stat   statsvc.Service
 		Github github.API
-		// Profile profilesvc.Service
-		Repo reposvc.Service
-		User usersvc.Service
+		Stat   statsvc.Service
+		Repo   reposvc.Service
+		User   usersvc.Service
 	}
 
 	model struct {
@@ -140,7 +139,7 @@ func (m *model) FetchRepos(ctx context.Context, userPerPage, repoPerPage int, re
 		if reset {
 			start = constant.GithubCreatedAt
 		} else {
-			start, _ = m.Repo.FindLastCreatedByUser(ctx, login)
+			start, _ = m.Repo.LastCreatedBy(ctx, login)
 		}
 		end := moment.NewCurrentFormattedDate()
 
@@ -440,7 +439,7 @@ func (m *model) UpdateProfile(ctx context.Context, numWorkers int) (err error) {
 		}
 	}(time.Now())
 
-	logins, err = m.Repo.DistinctLogin(ctx)
+	logins, err = m.Repo.Distinct(ctx, "login")
 	if err != nil {
 		return
 	}
@@ -469,10 +468,14 @@ func (m *model) UpdateProfile(ctx context.Context, numWorkers int) (err error) {
 		multiplex := func(in <-chan string) {
 			defer wg.Done()
 			for i := range in {
+				p, err := m.Repo.GetProfile(ctx, i)
+				if err != nil {
+					continue
+				}
 				select {
 				case <-ctx.Done():
 					return
-				case c <- m.Repo.GetProfile(ctx, i):
+				case c <- *p:
 				}
 			}
 		}

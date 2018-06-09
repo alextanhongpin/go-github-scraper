@@ -10,22 +10,32 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-// Store provides the interface for the repo store
 type (
-	Store interface {
-		AggregateLanguages(limit int) ([]schema.LanguageCount, error)
-		AggregateReposByUser(limit int) ([]schema.UserCount, error)
-		AggregateLanguageByUser(login string, limit int) ([]schema.LanguageCount, error)
-		AggregateMostRecentReposByLanguage(language string, limit int) ([]schema.Repo, error)
-		AggregateReposByLanguage(language string, limit int) ([]schema.UserCount, error)
-		BulkUpsert(repos []github.Repo) error
+	// Read defines all read operations by the store
+	Read interface {
 		Count() (int, error)
-		DistinctLogin() ([]string, error)
-		Drop() error
-		Init() error
+		Distinct(field string) ([]string, error)
 		FindAll(limit int, sort []string) ([]schema.Repo, error)
-		FindAllFor(login string) ([]schema.Repo, error)
-		FindLastCreatedByUser(login string) (*schema.Repo, error)
+		GroupByLanguage(language string, limit int) ([]schema.UserCount, error)
+		GroupByLanguageSortByMostRecent(language string, limit int) ([]schema.Repo, error)
+		GroupByUser(limit int) ([]schema.UserCount, error)
+		Languages(limit int) ([]schema.LanguageCount, error)
+		LanguagesBy(login string, limit int) ([]schema.LanguageCount, error)
+		LastCreatedBy(login string) (*schema.Repo, error)
+		ReposBy(login string) ([]schema.Repo, error)
+	}
+
+	// Write defines the write operation for the store
+	Write interface {
+		BulkUpsert(repos []github.Repo) error
+		Init() error
+		Drop() error
+	}
+
+	// Store represents the repository pattern that implements the Read and Write interface
+	Store interface {
+		Read
+		Write
 	}
 
 	// store is a struct that holds store configuration
@@ -53,66 +63,11 @@ func (s *store) Init() error {
 	})
 }
 
-func (s *store) FindAll(limit int, sort []string) ([]schema.Repo, error) {
+func (s *store) Drop() error {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 
-	var repos []schema.Repo
-	if err := c.Find(bson.M{}).
-		Sort(sort...).
-		Limit(limit).
-		All(&repos); err != nil {
-		return nil, err
-	}
-	return repos, nil
-}
-
-func (s *store) FindAllFor(login string) ([]schema.Repo, error) {
-	sess, c := s.db.Collection(s.collection)
-	defer sess.Close()
-
-	var repos []schema.Repo
-	q := bson.M{
-		"login":  login,
-		"isFork": false,
-	}
-
-	if err := c.Find(q).
-		All(&repos); err != nil {
-		return nil, err
-	}
-
-	return repos, nil
-}
-
-func (s *store) FindLastCreatedByUser(login string) (*schema.Repo, error) {
-	sess, c := s.db.Collection(s.collection)
-	defer sess.Close()
-
-	var repo schema.Repo
-	if err := c.Find(bson.M{
-		"login": login,
-	}).
-		Sort("-createdAt").
-		One(&repo); err != nil {
-		return nil, err
-	}
-	return &repo, nil
-}
-
-func (s *store) Upsert(repo github.Repo) error {
-	sess, c := s.db.Collection(s.collection)
-	defer sess.Close()
-
-	if _, err := c.Upsert(
-		bson.M{"nameWithOwner": repo.NameWithOwner},
-		bson.M{
-			"$set": repo.BSON(),
-		},
-	); err != nil {
-		return err
-	}
-	return nil
+	return c.DropCollection()
 }
 
 func (s *store) BulkUpsert(repos []github.Repo) error {
@@ -142,15 +97,64 @@ func (s *store) BulkUpsert(repos []github.Repo) error {
 	return nil
 }
 
+func (s *store) FindAll(limit int, sort []string) ([]schema.Repo, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	var repos []schema.Repo
+	err := c.Find(nil).
+		Sort(sort...).
+		Limit(limit).
+		All(&repos)
+
+	return repos, err
+}
+
+func (s *store) ReposBy(login string) ([]schema.Repo, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	var repos []schema.Repo
+
+	query := bson.M{
+		"login":  login,
+		"isFork": false,
+	}
+
+	if err := c.Find(query).All(&repos); err != nil {
+		return nil, err
+	}
+
+	return repos, nil
+}
+
+func (s *store) LastCreatedBy(login string) (*schema.Repo, error) {
+	sess, c := s.db.Collection(s.collection)
+	defer sess.Close()
+
+	var repo schema.Repo
+	query := bson.M{
+		"login": login,
+	}
+
+	err := c.Find(query).
+		Sort("-createdAt").
+		One(&repo)
+
+	return &repo, err
+}
+
 func (s *store) Count() (int, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
 	return c.Count()
 }
 
-func (s *store) AggregateLanguages(limit int) ([]schema.LanguageCount, error) {
+// Languages returns the languages that exists in sorted by frequency
+func (s *store) Languages(limit int) ([]schema.LanguageCount, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
+
 	pipeline := []bson.M{
 		bson.M{
 			"$match": bson.M{
@@ -187,16 +191,16 @@ func (s *store) AggregateLanguages(limit int) ([]schema.LanguageCount, error) {
 		},
 	}
 	var languages []schema.LanguageCount
-	if err := c.Pipe(pipeline).All(&languages); err != nil {
-		return nil, err
-	}
-	return languages, nil
+	err := c.Pipe(pipeline).All(&languages)
+
+	return languages, err
 }
 
-// AggregateReposByUser will return the repos by user
-func (s *store) AggregateReposByUser(limit int) ([]schema.UserCount, error) {
+// GroupByUser will return the repo count by user
+func (s *store) GroupByUser(limit int) ([]schema.UserCount, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
+
 	pipeline := []bson.M{
 		bson.M{
 			"$match": bson.M{
@@ -229,16 +233,15 @@ func (s *store) AggregateReposByUser(limit int) ([]schema.UserCount, error) {
 		},
 	}
 	var users []schema.UserCount
-	if err := c.Pipe(pipeline).All(&users); err != nil {
-		return nil, err
-	}
-	return users, nil
+	err := c.Pipe(pipeline).All(&users)
+	return users, err
 }
 
-// AggregateLanguageByUser returns the user's languages count
-func (s *store) AggregateLanguageByUser(login string, limit int) ([]schema.LanguageCount, error) {
+// LanguagesBy returns the user's languages count
+func (s *store) LanguagesBy(login string, limit int) ([]schema.LanguageCount, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
+
 	pipeline := []bson.M{
 		bson.M{
 			"$match": bson.M{
@@ -276,16 +279,15 @@ func (s *store) AggregateLanguageByUser(login string, limit int) ([]schema.Langu
 		},
 	}
 	var languages []schema.LanguageCount
-	if err := c.Pipe(pipeline).All(&languages); err != nil {
-		return nil, err
-	}
-	return languages, nil
+	err := c.Pipe(pipeline).All(&languages)
+	return languages, err
 }
 
-// AggregateMostRecentReposByLanguage returns the most recent repos by language
-func (s *store) AggregateMostRecentReposByLanguage(language string, limit int) ([]schema.Repo, error) {
+// GroupByLanguageSortByMostRecent returns the most recent repos by language
+func (s *store) GroupByLanguageSortByMostRecent(language string, limit int) ([]schema.Repo, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
+
 	pipeline := []bson.M{
 		bson.M{
 			"$match": bson.M{
@@ -328,16 +330,15 @@ func (s *store) AggregateMostRecentReposByLanguage(language string, limit int) (
 		},
 	}
 	var repos []schema.Repo
-	if err := c.Pipe(pipeline).All(&repos); err != nil {
-		return nil, err
-	}
-	return repos, nil
+	err := c.Pipe(pipeline).All(&repos)
+	return repos, err
 }
 
-// AggregateReposByLanguage returns the users by languages
-func (s *store) AggregateReposByLanguage(language string, limit int) ([]schema.UserCount, error) {
+// GroupByLanguage returns the users by languages
+func (s *store) GroupByLanguage(language string, limit int) ([]schema.UserCount, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
+
 	pipeline := []bson.M{
 		bson.M{
 			"$match": bson.M{
@@ -384,26 +385,16 @@ func (s *store) AggregateReposByLanguage(language string, limit int) ([]schema.U
 		},
 	}
 	var repos []schema.UserCount
-	if err := c.Pipe(pipeline).All(&repos); err != nil {
-		return nil, err
-	}
-
-	return repos, nil
+	err := c.Pipe(pipeline).All(&repos)
+	return repos, err
 }
 
-func (s *store) Drop() error {
+// Distinct returns a distinct login, so that we don't need to query the repository if the user does not exists
+func (s *store) Distinct(field string) ([]string, error) {
 	sess, c := s.db.Collection(s.collection)
 	defer sess.Close()
-	return c.DropCollection()
-}
 
-// DistinctLogin returns a distinct login, so that we don't need to query the repository if the user does not exists
-func (s *store) DistinctLogin() ([]string, error) {
-	sess, c := s.db.Collection(s.collection)
-	defer sess.Close()
 	var res []string
-	if err := c.Find(nil).Distinct("login", &res); err != nil {
-		return nil, err
-	}
-	return res, nil
+	err := c.Find(nil).Distinct(field, &res)
+	return res, err
 }

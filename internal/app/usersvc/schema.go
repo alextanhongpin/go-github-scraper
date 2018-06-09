@@ -22,9 +22,9 @@ type User struct {
 	schema.Profile `bson:",inline"`
 }
 
-type GetUserCountResponse struct {
-	Count int `json:"count"`
-}
+// type GetUserCountResponse struct {
+// 	Count int `json:"count"`
+// }
 
 type Logins struct {
 	Items []string `bson:"items,omitempty"`

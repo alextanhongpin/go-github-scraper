@@ -13,34 +13,44 @@ import (
 
 var errTypeAssertion = errors.New("unable to perform type assertion")
 
-// Store represents the interface for the analytic store
 type (
-	Store interface {
-		Init() error
+	// Read represents the read interface for the store
+	Read interface {
 		GetUserCount() (*UserCount, error)
-		PostUserCount(count int) error
 		GetRepoCount() (*RepoCount, error)
-		PostRepoCount(count int) error
 		GetReposMostRecent() (*ReposMostRecent, error)
-		PostReposMostRecent(data []schema.Repo) error
 		GetRepoCountByUser() (*RepoCountByUser, error)
-		PostRepoCountByUser(repos []schema.UserCount) error
 		GetReposMostStars() (*ReposMostStars, error)
-		PostReposMostStars(repos []schema.Repo) error
 		GetReposMostForks() (*ReposMostForks, error)
-		PostReposMostForks(repos []schema.Repo) error
 		GetMostPopularLanguage() (*MostPopularLanguage, error)
-		PostMostPopularLanguage(languages []schema.LanguageCount) error
 		GetLanguageCountByUser() (*LanguageCountByUser, error)
-		PostLanguageCountByUser(languages []schema.LanguageCount) error
 		GetMostRecentReposByLanguage() (*MostRecentReposByLanguage, error)
-		PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error
 		GetReposByLanguage() (*ReposByLanguage, error)
-		PostReposByLanguage(users []schema.UserCountByLanguage) error
 		GetCompanyCount() (*CompanyCount, error)
-		PostCompanyCount(count int) error
 		GetUsersByCompany() (*UsersByCompany, error)
+	}
+
+	// Write represents the write operation for the store
+	Write interface {
+		Init() error
+		PostUserCount(count int) error
+		PostRepoCount(count int) error
+		PostReposMostRecent(data []schema.Repo) error
+		PostRepoCountByUser(repos []schema.UserCount) error
+		PostReposMostStars(repos []schema.Repo) error
+		PostReposMostForks(repos []schema.Repo) error
+		PostMostPopularLanguage(languages []schema.LanguageCount) error
+		PostLanguageCountByUser(languages []schema.LanguageCount) error
+		PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error
+		PostReposByLanguage(users []schema.UserCountByLanguage) error
+		PostCompanyCount(count int) error
 		PostUsersByCompany(users []schema.Company) error
+	}
+
+	// Store represents the interface for the analytic store
+	Store interface {
+		Read
+		Write
 	}
 
 	store struct {
