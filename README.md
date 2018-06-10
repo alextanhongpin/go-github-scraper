@@ -39,3 +39,19 @@ Using __opencensus__ to add __jaeger__ tracing capabilities:
 Additional metadata (key-value pairs) can be added for more information:
 
 ![additional-metadata.png](./assets/additional-metadata.png)
+
+## Stats
+
+```bash
+-------------------------------------------------------------------------------
+ Language            Files        Lines         Code     Comments       Blanks
+-------------------------------------------------------------------------------
+ Dockerfile              1           56           29           11           16
+ Go                     66         5788         4572          241          975
+ Makefile                1           40           29            1           10
+ Markdown                1           41           41            0            0
+ YAML                    1           35           21           12            2
+-------------------------------------------------------------------------------
+ Total                  70         5960         4692          265         1003
+-------------------------------------------------------------------------------
+```
