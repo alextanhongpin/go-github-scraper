@@ -23,11 +23,21 @@ func (m *tracingMiddleware) FetchUsersCursor(ctx context.Context, location, star
 	ctx, span := trace.StartSpan(ctx, "FetchUsersCursor")
 	defer span.End()
 
+	span.AddAttributes(
+		trace.StringAttribute("start", start),
+		trace.StringAttribute("end", end),
+		trace.Int64Attribute("limit", int64(limit)))
+
 	return m.service.FetchUsersCursor(ctx, location, start, end, limit)
 }
 func (m *tracingMiddleware) FetchReposCursor(ctx context.Context, login, start, end string, limit int) (repos []Repo, err error) {
 	ctx, span := trace.StartSpan(ctx, "FetchReposCursor")
 	defer span.End()
+
+	span.AddAttributes(
+		trace.StringAttribute("start", start),
+		trace.StringAttribute("end", end),
+		trace.Int64Attribute("limit", int64(limit)))
 
 	return m.service.FetchReposCursor(ctx, login, start, end, limit)
 }

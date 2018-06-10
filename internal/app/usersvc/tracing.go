@@ -32,6 +32,8 @@ func (m *tracingMiddleware) BulkUpsert(ctx context.Context, users []github.User)
 	ctx, span := trace.StartSpan(ctx, "BulkUpsert")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("perPage", int64(len(users))))
+
 	return m.service.BulkUpsert(ctx, users)
 }
 
@@ -39,12 +41,16 @@ func (m *tracingMiddleware) FindLastFetched(ctx context.Context, limit int) ([]U
 	ctx, span := trace.StartSpan(ctx, "FindLastFetched")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("limit", int64(limit)))
+
 	return m.service.FindLastFetched(ctx, limit)
 }
 
 func (m *tracingMiddleware) UpdateOne(ctx context.Context, login string) error {
 	ctx, span := trace.StartSpan(ctx, "UpdateOne")
 	defer span.End()
+
+	span.AddAttributes(trace.StringAttribute("login", login))
 
 	return m.service.UpdateOne(ctx, login)
 }
@@ -60,12 +66,16 @@ func (m *tracingMiddleware) BulkUpdate(ctx context.Context, users []User) error 
 	ctx, span := trace.StartSpan(ctx, "BulkUpdate")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("perPage", int64(len(users))))
+
 	return m.service.BulkUpdate(ctx, users)
 }
 
 func (m *tracingMiddleware) WithRepos(ctx context.Context, count int) ([]User, error) {
 	ctx, span := trace.StartSpan(ctx, "WithRepos")
 	defer span.End()
+
+	span.AddAttributes(trace.Int64Attribute("count", int64(count)))
 
 	return m.service.WithRepos(ctx, count)
 }
@@ -81,6 +91,8 @@ func (m *tracingMiddleware) FindByCompany(ctx context.Context, company string) (
 	ctx, span := trace.StartSpan(ctx, "FindByCompany")
 	defer span.End()
 
+	span.AddAttributes(trace.StringAttribute("company", company))
+
 	return m.service.FindByCompany(ctx, company)
 }
 
@@ -88,12 +100,18 @@ func (m *tracingMiddleware) AggregateCompany(ctx context.Context, min, max int) 
 	ctx, span := trace.StartSpan(ctx, "AggregateCompany")
 	defer span.End()
 
+	span.AddAttributes(
+		trace.Int64Attribute("min", int64(min)),
+		trace.Int64Attribute("max", int64(max)))
+
 	return m.service.AggregateCompany(ctx, min, max)
 }
 
 func (m *tracingMiddleware) FindOne(ctx context.Context, login string) (*User, error) {
 	ctx, span := trace.StartSpan(ctx, "FindOne")
 	defer span.End()
+
+	span.AddAttributes(trace.StringAttribute("login", login))
 
 	return m.service.FindOne(ctx, login)
 }

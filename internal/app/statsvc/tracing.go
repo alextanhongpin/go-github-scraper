@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
+
 	"go.opencensus.io/trace"
 )
 
@@ -30,6 +31,8 @@ func (m *tracingMiddleware) PostUserCount(ctx context.Context, count int) error 
 	ctx, span := trace.StartSpan(ctx, "PostUserCount")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("count", int64(count)))
+
 	return m.service.PostUserCount(ctx, count)
 }
 
@@ -43,6 +46,8 @@ func (m *tracingMiddleware) GetRepoCount(ctx context.Context) (*RepoCount, error
 func (m *tracingMiddleware) PostRepoCount(ctx context.Context, count int) error {
 	ctx, span := trace.StartSpan(ctx, "PostRepoCount")
 	defer span.End()
+
+	span.AddAttributes(trace.Int64Attribute("count", int64(count)))
 
 	return m.service.PostRepoCount(ctx, count)
 }
@@ -58,6 +63,8 @@ func (m *tracingMiddleware) PostReposMostRecent(ctx context.Context, data []sche
 	ctx, span := trace.StartSpan(ctx, "PostReposMostRecent")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("count", int64(len(data))))
+
 	return m.service.PostReposMostRecent(ctx, data)
 }
 
@@ -71,6 +78,8 @@ func (m *tracingMiddleware) GetRepoCountByUser(ctx context.Context) (*RepoCountB
 func (m *tracingMiddleware) PostRepoCountByUser(ctx context.Context, users []schema.UserCount) error {
 	ctx, span := trace.StartSpan(ctx, "PostRepoCountByUser")
 	defer span.End()
+
+	span.AddAttributes(trace.Int64Attribute("count", int64(len(users))))
 
 	return m.service.PostRepoCountByUser(ctx, users)
 }
@@ -86,6 +95,8 @@ func (m *tracingMiddleware) PostReposMostStars(ctx context.Context, repos []sche
 	ctx, span := trace.StartSpan(ctx, "PostReposMostStars")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("count", int64(len(repos))))
+
 	return m.service.PostReposMostStars(ctx, repos)
 }
 
@@ -99,6 +110,8 @@ func (m *tracingMiddleware) GetReposMostForks(ctx context.Context) (*ReposMostFo
 func (m *tracingMiddleware) PostReposMostForks(ctx context.Context, repos []schema.Repo) error {
 	ctx, span := trace.StartSpan(ctx, "PostReposMostForks")
 	defer span.End()
+
+	span.AddAttributes(trace.Int64Attribute("count", int64(len(repos))))
 
 	return m.service.PostReposMostForks(ctx, repos)
 }
@@ -114,6 +127,8 @@ func (m *tracingMiddleware) PostMostPopularLanguage(ctx context.Context, languag
 	ctx, span := trace.StartSpan(ctx, "PostMostPopularLanguage")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("count", int64(len(languages))))
+
 	return m.service.PostMostPopularLanguage(ctx, languages)
 }
 
@@ -127,6 +142,8 @@ func (m *tracingMiddleware) GetLanguageCountByUser(ctx context.Context) (*Langua
 func (m *tracingMiddleware) PostLanguageCountByUser(ctx context.Context, languages []schema.LanguageCount) error {
 	ctx, span := trace.StartSpan(ctx, "PostLanguageCountByUser")
 	defer span.End()
+
+	span.AddAttributes(trace.Int64Attribute("count", int64(len(languages))))
 
 	return m.service.PostLanguageCountByUser(ctx, languages)
 }
@@ -142,6 +159,8 @@ func (m *tracingMiddleware) PostMostRecentReposByLanguage(ctx context.Context, r
 	ctx, span := trace.StartSpan(ctx, "PostMostRecentReposByLanguage")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("count", int64(len(repos))))
+
 	return m.service.PostMostRecentReposByLanguage(ctx, repos)
 }
 
@@ -155,6 +174,8 @@ func (m *tracingMiddleware) GetReposByLanguage(ctx context.Context) (*ReposByLan
 func (m *tracingMiddleware) PostReposByLanguage(ctx context.Context, users []schema.UserCountByLanguage) error {
 	ctx, span := trace.StartSpan(ctx, "PostReposByLanguage")
 	defer span.End()
+
+	span.AddAttributes(trace.Int64Attribute("count", int64(len(users))))
 
 	return m.service.PostReposByLanguage(ctx, users)
 }
@@ -170,6 +191,8 @@ func (m *tracingMiddleware) PostCompanyCount(ctx context.Context, count int) err
 	ctx, span := trace.StartSpan(ctx, "PostCompanyCount")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("count", int64(count)))
+
 	return m.service.PostCompanyCount(ctx, count)
 }
 
@@ -183,6 +206,8 @@ func (m *tracingMiddleware) GetUsersByCompany(ctx context.Context) (*UsersByComp
 func (m *tracingMiddleware) PostUsersByCompany(ctx context.Context, users []schema.Company) error {
 	ctx, span := trace.StartSpan(ctx, "PostUsersByCompany")
 	defer span.End()
+
+	span.AddAttributes(trace.Int64Attribute("count", int64(len(users))))
 
 	return m.service.PostUsersByCompany(ctx, users)
 }
