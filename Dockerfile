@@ -7,7 +7,7 @@ COPY vendor/ .
 
 WORKDIR /go/src/github.com/alextanhongpin/go-github-scraper
 
-COPY main.go go.mod .
+COPY main.go go.mod ./
 
 # Additionally copy the internal folder, since this is not a package
 # and will not be fetched from Github
@@ -39,7 +39,7 @@ ARG VCS_REF
 ARG NAME
 ARG VENDOR
 
-ENV VERSION=${VERSION}}
+ENV VERSION=${VERSION}
 
 # Metadata
 LABEL org.label-schema.build-date=$BUILD_DATE \
