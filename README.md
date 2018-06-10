@@ -74,3 +74,11 @@ $ go tool pprof --inuse_space http://localhost:6060/debug/pprof/heap
 mongodump -u root --authenticationDatabase=admin --db=scraper --collection=users --out dump/
 
 mongoexport --authenticationDatabase=admin -d scraper -o user.json --jsonArray -c users -u root -->
+
+
+when adding multiple capabilities to your application (logging, tracing etc), you really need to architect them well to isolate the responsibilities well
+
+- for example, you don’t want to blindly throw logging or tracing everywhere in your code - it’s untraceable lol
+- and you want to make sure they doesn’t get executed during testing
+- I think go surpresses the logs when testing, but other languages doesn’t behave the same way (edited)
+- and this adds a lot of complexity

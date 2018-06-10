@@ -22,10 +22,11 @@ import (
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/null"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/profiler"
 
-	"github.com/rs/cors"
-
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/cors"
 	"github.com/spf13/viper"
+	"go.opencensus.io/exporter/jaeger"
+	"go.opencensus.io/trace"
 )
 
 func init() {
@@ -62,6 +63,8 @@ func init() {
 	viper.SetDefault("memprofile", "")                               // Write memoryprofile to file, e.g. mem.prof
 	viper.SetDefault("httpprofile", false)                           // Toggle state for http profiler
 	viper.SetDefault("graceful_timeout", 15)                         // The duration for which the server gracefully wait for existing connections to finish
+	viper.SetDefault("trace_endpoint", "http://localhost:14268")     // The endpoint of the jaeger image
+	viper.SetDefault("trace_service", "go-scraper")                  // The name of the service that appears in the dashboard
 
 	if viper.GetString("github_token") == "" {
 		panic("github_token environment variable is missing")
@@ -84,6 +87,21 @@ func main() {
 		Timeout: time.Second * 5,
 	}
 
+	// Setup jaeger
+	exporter, err := jaeger.NewExporter(jaeger.Options{
+		Endpoint:    viper.GetString("trace_endpoint"),
+		ServiceName: viper.GetString("trace_service"),
+	})
+
+	if err != nil {
+		stdlog.Fatal(err)
+	}
+
+	trace.RegisterExporter(exporter)
+
+	// For demoing purpose, always sample
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+
 	// Setup logger
 	l := logger.New()
 	defer l.Sync()
@@ -102,13 +120,20 @@ func main() {
 		Stat: statsvc.New(db, l.Named("statsvc")),
 		Github: github.New(httpClient,
 			viper.GetString("github_token"),
-			viper.GetString("github_uri"), github.LoggingMiddleware(l.Named("github"))),
-		Repo: reposvc.New(db, reposvc.LoggingMiddleware(l.Named("reposvc"))),
+			viper.GetString("github_uri"),
+			github.Logging(l.Named("github")),
+			github.Tracing()),
+		Repo: reposvc.New(db,
+			reposvc.Logging(l.Named("reposvc")),
+			reposvc.Tracing()),
 		User: usersvc.New(db, l.Named("usersvc")),
 	}
 
 	// Setup mediator services, which is basically an orchestration of multiple services
-	msvc := mediatorsvc.New(m, mediatorsvc.LoggingMiddleware(l.Named("mediatorsvc")))
+	msvc := mediatorsvc.New(
+		m,
+		mediatorsvc.Logging(l.Named("mediatorsvc")),
+		mediatorsvc.Tracing())
 
 	// Setup cronjob
 	cronjob.Exec(ctx,
