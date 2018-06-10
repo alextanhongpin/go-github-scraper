@@ -117,7 +117,9 @@ func main() {
 
 	// Setup services
 	m := mediatorsvc.Mediator{
-		Stat: statsvc.New(db, l.Named("statsvc")),
+		Stat: statsvc.New(db,
+			statsvc.Logging(l.Named("statsvc")),
+			statsvc.Tracing()),
 		Github: github.New(httpClient,
 			viper.GetString("github_token"),
 			viper.GetString("github_uri"),

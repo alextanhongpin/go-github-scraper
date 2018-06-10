@@ -1,387 +1,180 @@
 package statsvc
 
 import (
-	"context"
 	"log"
-	"time"
 
-	"github.com/alextanhongpin/go-github-scraper/internal/pkg/logger"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
-	"go.uber.org/zap"
 )
 
 // Model represents the interface for the analytic business logic
 type (
+	Model interface {
+		Init() error
+		GetUserCount() (*UserCount, error)
+		PostUserCount(count int) error
+		GetRepoCount() (*RepoCount, error)
+		PostRepoCount(count int) error
+		GetReposMostRecent() (*ReposMostRecent, error)
+		PostReposMostRecent(data []schema.Repo) error
+		GetRepoCountByUser() (*RepoCountByUser, error)
+		PostRepoCountByUser(users []schema.UserCount) error
+		GetReposMostStars() (*ReposMostStars, error)
+		PostReposMostStars(repos []schema.Repo) error
+		GetReposMostForks() (*ReposMostForks, error)
+		PostReposMostForks(repos []schema.Repo) error
+		GetMostPopularLanguage() (*MostPopularLanguage, error)
+		PostMostPopularLanguage(languages []schema.LanguageCount) error
+		GetLanguageCountByUser() (*LanguageCountByUser, error)
+		PostLanguageCountByUser(languages []schema.LanguageCount) error
+		GetMostRecentReposByLanguage() (*MostRecentReposByLanguage, error)
+		PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error
+		GetReposByLanguage() (*ReposByLanguage, error)
+		PostReposByLanguage(users []schema.UserCountByLanguage) error
+		GetCompanyCount() (*CompanyCount, error)
+		PostCompanyCount(count int) error
+		GetUsersByCompany() (*UsersByCompany, error)
+		PostUsersByCompany(users []schema.Company) error
+	}
+
 	model struct {
-		store  Store
-		logger *logger.Logger
+		store Store
 	}
 )
 
 // NewModel returns a new analytic model
-func NewModel(s Store, l *logger.Logger) Service {
+func NewModel(s Store) Model {
 	m := model{
-		store:  s,
-		logger: l,
+		store: s,
 	}
-	if err := m.Init(context.Background()); err != nil {
+	if err := m.Init(); err != nil {
 		log.Fatal(err)
 	}
 	return &m
 }
 
-func (m *model) Init(ctx context.Context) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "Init"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error initializing statsvc", zap.Error(err))
-		} else {
-			zlog.Info("initialize statsvc")
-		}
-	}(time.Now())
+func (m *model) Init() error {
 	return m.store.Init()
 }
 
-func (m *model) GetUserCount(ctx context.Context) (res *UserCount, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetUserCount"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting user count", zap.Error(err))
-		} else {
-			zlog.Info("get user count",
-				zap.Int("count", res.Count))
-		}
-	}(time.Now())
+func (m *model) GetUserCount() (*UserCount, error) {
 	return m.store.GetUserCount()
 }
 
-func (m *model) PostUserCount(ctx context.Context, count int) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostUserCount"),
-				zap.Duration("took", time.Since(start)),
-				zap.Int("count", count))
-		if err != nil {
-			zlog.Error("error posting user count", zap.Error(err))
-		} else {
-			zlog.Info("post user count")
-		}
-	}(time.Now())
+func (m *model) PostUserCount(count int) error {
 	return m.store.PostUserCount(count)
 }
 
-func (m *model) GetRepoCount(ctx context.Context) (res *RepoCount, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetRepoCount"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting repo count", zap.Error(err))
-		} else {
-			zlog.Info("get user count", zap.Int("count", res.Count))
-		}
-	}(time.Now())
+func (m *model) GetRepoCount() (*RepoCount, error) {
 	return m.store.GetRepoCount()
 }
 
-func (m *model) PostRepoCount(ctx context.Context, count int) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostRepoCount"),
-				zap.Duration("took", time.Since(start)),
-				zap.Int("count", count))
-		if err != nil {
-			zlog.Error("error posting repo count", zap.Error(err))
-		} else {
-			zlog.Info("post user count")
-		}
-	}(time.Now())
+func (m *model) PostRepoCount(count int) error {
 	return m.store.PostRepoCount(count)
 }
 
-func (m *model) GetReposMostRecent(ctx context.Context) (res *ReposMostRecent, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetReposMostRecent"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting repos most count", zap.Error(err))
-		} else {
-			zlog.Info("get repos most recent")
-		}
-	}(time.Now())
+func (m *model) GetReposMostRecent() (*ReposMostRecent, error) {
 	return m.store.GetReposMostRecent()
 }
 
-func (m *model) PostReposMostRecent(ctx context.Context, repos []schema.Repo) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostReposMostRecent"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error posting repos most recent", zap.Error(err))
-		} else {
-			zlog.Info("post repos most recent", zap.Int("count", len(repos)))
-		}
-	}(time.Now())
+func (m *model) PostReposMostRecent(repos []schema.Repo) error {
+	if len(repos) == 0 {
+		return nil
+	}
 	return m.store.PostReposMostRecent(repos)
 }
 
-func (m *model) GetRepoCountByUser(ctx context.Context) (res *RepoCountByUser, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetRepoCountByUser"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting repo count by user", zap.Error(err))
-		} else {
-			zlog.Info("get repos count by user")
-		}
-	}(time.Now())
+func (m *model) GetRepoCountByUser() (*RepoCountByUser, error) {
 	return m.store.GetRepoCountByUser()
 }
 
-func (m *model) PostRepoCountByUser(ctx context.Context, users []schema.UserCount) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostRepoCountByUser"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error posting repo count by user", zap.Error(err))
-		} else {
-			zlog.Info("post repo count by user", zap.Int("count", len(users)))
-		}
-	}(time.Now())
+func (m *model) PostRepoCountByUser(users []schema.UserCount) error {
+	if len(users) == 0 {
+		return nil
+	}
 	return m.store.PostRepoCountByUser(users)
 }
 
-func (m *model) GetReposMostStars(ctx context.Context) (res *ReposMostStars, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetReposMostStars"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting repos most stars", zap.Error(err))
-		} else {
-			zlog.Info("get repos most stars")
-		}
-	}(time.Now())
+func (m *model) GetReposMostStars() (*ReposMostStars, error) {
 	return m.store.GetReposMostStars()
 }
 
-func (m *model) PostReposMostStars(ctx context.Context, repos []schema.Repo) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostReposMostStars"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error posting repos most stars", zap.Error(err))
-		} else {
-			zlog.Info("post repos most stars")
-		}
-	}(time.Now())
+func (m *model) PostReposMostStars(repos []schema.Repo) error {
+	if len(repos) == 0 {
+		return nil
+	}
 	return m.store.PostReposMostStars(repos)
 }
 
-func (m *model) GetReposMostForks(ctx context.Context) (res *ReposMostForks, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetReposMostForks"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting repos most forks", zap.Error(err))
-		} else {
-			zlog.Info("get repos most forks")
-		}
-	}(time.Now())
+func (m *model) GetReposMostForks() (*ReposMostForks, error) {
 	return m.store.GetReposMostForks()
 }
 
-func (m *model) PostReposMostForks(ctx context.Context, repos []schema.Repo) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostReposMostForks"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error posting repos most forks", zap.Error(err))
-		} else {
-			zlog.Info("post repos most forks")
-		}
-	}(time.Now())
+func (m *model) PostReposMostForks(repos []schema.Repo) error {
+	if len(repos) == 0 {
+		return nil
+	}
 	return m.store.PostReposMostForks(repos)
 }
 
-func (m *model) GetMostPopularLanguage(ctx context.Context) (res *MostPopularLanguage, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetMostPopularLanguage"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting most popular language", zap.Error(err))
-		} else {
-			zlog.Info("get most poplular language")
-		}
-	}(time.Now())
+func (m *model) GetMostPopularLanguage() (*MostPopularLanguage, error) {
 	return m.store.GetMostPopularLanguage()
 }
 
-func (m *model) PostMostPopularLanguage(ctx context.Context, languages []schema.LanguageCount) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostMostPopularLanguage"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error posting most popular language", zap.Error(err))
-		} else {
-			zlog.Info("post most popular language")
-		}
-	}(time.Now())
+func (m *model) PostMostPopularLanguage(languages []schema.LanguageCount) error {
+	if len(languages) == 0 {
+		return nil
+	}
 	return m.store.PostMostPopularLanguage(languages)
 }
 
-func (m *model) GetLanguageCountByUser(ctx context.Context) (res *LanguageCountByUser, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetLanguageCountByUser"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting language count by users", zap.Error(err))
-		} else {
-			zlog.Info("get language count by user")
-		}
-	}(time.Now())
+func (m *model) GetLanguageCountByUser() (*LanguageCountByUser, error) {
 	return m.store.GetLanguageCountByUser()
 }
 
-func (m *model) PostLanguageCountByUser(ctx context.Context, languages []schema.LanguageCount) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostLanguageCountByUser"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error posting language count by user", zap.Error(err))
-		} else {
-			zlog.Info("post language count by user")
-		}
-	}(time.Now())
+func (m *model) PostLanguageCountByUser(languages []schema.LanguageCount) error {
+	if len(languages) == 0 {
+		return nil
+	}
 	return m.store.PostLanguageCountByUser(languages)
 }
 
-func (m *model) GetMostRecentReposByLanguage(ctx context.Context) (res *MostRecentReposByLanguage, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetMostRecentReposByLanguage"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting most recent repos by language", zap.Error(err))
-		} else {
-			zlog.Info("get most recent repos by language")
-		}
-	}(time.Now())
+func (m *model) GetMostRecentReposByLanguage() (*MostRecentReposByLanguage, error) {
 	return m.store.GetMostRecentReposByLanguage()
 }
 
-func (m *model) PostMostRecentReposByLanguage(ctx context.Context, repos []schema.RepoLanguage) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostMostRecentReposByLanguage"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error posting most recent repos by language", zap.Error(err))
-		} else {
-			zlog.Info("post most recent repos by language")
-		}
-	}(time.Now())
+func (m *model) PostMostRecentReposByLanguage(repos []schema.RepoLanguage) error {
+	if len(repos) == 0 {
+		return nil
+	}
 	return m.store.PostMostRecentReposByLanguage(repos)
 }
 
-func (m *model) GetReposByLanguage(ctx context.Context) (res *ReposByLanguage, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetReposByLanguage"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting repos by language", zap.Error(err))
-		} else {
-			zlog.Info("get repos by language")
-		}
-	}(time.Now())
+func (m *model) GetReposByLanguage() (*ReposByLanguage, error) {
 	return m.store.GetReposByLanguage()
 }
 
-func (m *model) PostReposByLanguage(ctx context.Context, users []schema.UserCountByLanguage) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostReposByLanguage"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error posting repos by language", zap.Error(err))
-		} else {
-			zlog.Info("post repos by language")
-		}
-	}(time.Now())
+func (m *model) PostReposByLanguage(users []schema.UserCountByLanguage) error {
+	if len(users) == 0 {
+		return nil
+	}
 	return m.store.PostReposByLanguage(users)
 }
 
-func (m *model) GetCompanyCount(ctx context.Context) (res *CompanyCount, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetCompanyCount"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting company count", zap.Error(err))
-		} else {
-			zlog.Info("get company count",
-				zap.Int("count", res.Count))
-		}
-	}(time.Now())
+func (m *model) GetCompanyCount() (*CompanyCount, error) {
 	return m.store.GetCompanyCount()
 }
 
-func (m *model) PostCompanyCount(ctx context.Context, count int) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostCompanyCount"),
-				zap.Duration("took", time.Since(start)),
-				zap.Int("count", count))
-		if err != nil {
-			zlog.Error("error posting company count", zap.Error(err))
-		} else {
-			zlog.Info("post company count")
-		}
-	}(time.Now())
+func (m *model) PostCompanyCount(count int) error {
 	return m.store.PostCompanyCount(count)
 }
 
-func (m *model) GetUsersByCompany(ctx context.Context) (res *UsersByCompany, err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "GetUsersByCompany"),
-				zap.Duration("took", time.Since(start)))
-		if err != nil {
-			zlog.Error("error getting users by company", zap.Error(err))
-		} else {
-			zlog.Info("get users by company")
-		}
-	}(time.Now())
+func (m *model) GetUsersByCompany() (*UsersByCompany, error) {
 	return m.store.GetUsersByCompany()
 }
 
-func (m *model) PostUsersByCompany(ctx context.Context, users []schema.Company) (err error) {
-	defer func(start time.Time) {
-		zlog := logger.Wrap(ctx, m.logger).
-			With(zap.String("method", "PostUsersByCompany"),
-				zap.Duration("took", time.Since(start)),
-				zap.Int("count", len(users)))
-		if err != nil {
-			zlog.Error("error posting users by company", zap.Error(err))
-		} else {
-			zlog.Info("post users by company")
-		}
-	}(time.Now())
+func (m *model) PostUsersByCompany(users []schema.Company) error {
+	if len(users) == 0 {
+		return nil
+	}
 	return m.store.PostUsersByCompany(users)
 }
