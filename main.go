@@ -126,7 +126,9 @@ func main() {
 		Repo: reposvc.New(db,
 			reposvc.Logging(l.Named("reposvc")),
 			reposvc.Tracing()),
-		User: usersvc.New(db, l.Named("usersvc")),
+		User: usersvc.New(db,
+			usersvc.Logging(l.Named("usersvc")),
+			usersvc.Tracing()),
 	}
 
 	// Setup mediator services, which is basically an orchestration of multiple services

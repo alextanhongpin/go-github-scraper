@@ -11,24 +11,34 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-// Store provides the interface for the Service struct
 type (
-	Store interface {
+	// Read represents the read interface for the store
+	Read interface {
 		AggregateCompany(min, max int) ([]schema.Company, error)
-		BulkUpsert(users []github.User) error
-		BulkUpdate(users []User) error
 		Count() (int, error)
-		Drop() error
 		FindAll(limit int, sort []string) ([]User, error)
 		FindByCompany(company string) ([]schema.User, error)
 		FindLastCreated() (*User, error)
 		FindOne(login string) (*User, error)
-		Init() error
 		PickLogin() ([]string, error)
-		UpdateOne(login string) error
-		Upsert(github.User) error
 		WithRepos(count int) ([]User, error)
 		DistinctCompany() ([]string, error)
+	}
+
+	// Write represents the write interface for the store
+	Write interface {
+		Drop() error
+		UpdateOne(login string) error
+		Upsert(github.User) error
+		Init() error
+		BulkUpsert(users []github.User) error
+		BulkUpdate(users []User) error
+	}
+
+	// Store provides the interface for the Service struct
+	Store interface {
+		Read
+		Write
 	}
 
 	// store is a struct that holds service configuration
