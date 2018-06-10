@@ -39,7 +39,7 @@ type (
 
 	// Mediator holds the services in used
 	Mediator struct {
-		Github github.API
+		Github github.Service
 		Stat   statsvc.Service
 		Repo   reposvc.Service
 		User   usersvc.Service

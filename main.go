@@ -102,8 +102,7 @@ func main() {
 		Stat: statsvc.New(db, l.Named("statsvc")),
 		Github: github.New(httpClient,
 			viper.GetString("github_token"),
-			viper.GetString("github_uri"),
-			l.Named("github")),
+			viper.GetString("github_uri"), github.LoggingMiddleware(l.Named("github"))),
 		Repo: reposvc.New(db, reposvc.LoggingMiddleware(l.Named("reposvc"))),
 		User: usersvc.New(db, l.Named("usersvc")),
 	}
