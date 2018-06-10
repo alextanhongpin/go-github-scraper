@@ -109,7 +109,7 @@ func main() {
 	}
 
 	// Setup mediator services, which is basically an orchestration of multiple services
-	msvc := mediatorsvc.New(m, l.Named("mediatorsvc"))
+	msvc := mediatorsvc.New(m, mediatorsvc.LoggingMiddleware(l.Named("mediatorsvc")))
 
 	// Setup cronjob
 	cronjob.Exec(ctx,

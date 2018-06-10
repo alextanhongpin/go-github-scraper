@@ -47,6 +47,15 @@ func Duration(s time.Time) zap.Field {
 	return zap.Duration("took", time.Since(s))
 }
 
+// Maybe will log with .Warn if there is an error, else it will log with .Info
+func Maybe(l *Logger, msg string, err error) {
+	if err != nil {
+		l.Warn(msg, zap.Error(err))
+	} else {
+		l.Info(msg)
+	}
+}
+
 // New returns a new logger
 func New() *Logger {
 	l, err := zap.NewProduction()

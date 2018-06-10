@@ -45,11 +45,7 @@ func (l *loggingMiddleware) BulkUpsert(ctx context.Context, repos []github.Repo)
 			logger.Method("BulkUpsert"),
 			logger.Duration(start))
 
-		if err != nil {
-			L.Warn("error upserting repos", zap.Error(err))
-		} else {
-			L.Info("inserted repos", zap.Int("count", len(repos)))
-		}
+		logger.Maybe(L, "bulk upsert repos", err)
 	}(time.Now())
 	return l.next.BulkUpsert(ctx, repos)
 }
@@ -60,11 +56,7 @@ func (l *loggingMiddleware) Count(ctx context.Context) (c int, err error) {
 			logger.Method("Count"),
 			logger.Duration(start))
 
-		if err != nil {
-			L.Warn("error returning repo count", zap.Error(err))
-		} else {
-			L.Info("got repo count", zap.Int("count", c))
-		}
+		logger.Maybe(L, "get repo count", err)
 	}(time.Now())
 	return l.next.Count(ctx)
 }
@@ -88,11 +80,7 @@ func (l *loggingMiddleware) MostPopularLanguage(ctx context.Context, limit int) 
 			logger.Duration(start),
 			zap.Int("limit", limit))
 
-		if err != nil {
-			L.Warn("error getting most popular language", zap.Error(err))
-		} else {
-			L.Info("got most popular language")
-		}
+		logger.Maybe(L, "get most popular language", err)
 	}(time.Now())
 	return l.next.MostPopularLanguage(ctx, limit)
 }
@@ -103,11 +91,7 @@ func (l *loggingMiddleware) MostRecent(ctx context.Context, limit int) (res []sc
 			logger.Method("MostRecent"),
 			logger.Duration(start))
 
-		if err != nil {
-			L.Warn("error getting most recent repo", zap.Error(err))
-		} else {
-			L.Info("got most recent repos", zap.Int("count", len(res)))
-		}
+		logger.Maybe(L, "get most recent repos", err)
 	}(time.Now())
 	return l.next.MostRecent(ctx, limit)
 }
@@ -120,11 +104,7 @@ func (l *loggingMiddleware) MostRecentReposByLanguage(ctx context.Context, langu
 			zap.String("language", language),
 			zap.Int("limit", limit))
 
-		if err != nil {
-			L.Warn("error getting most recent repos by language", zap.Error(err))
-		} else {
-			L.Info("got most recent repos by language", zap.Int("count", len(res)))
-		}
+		logger.Maybe(L, "get most recent repos by language", err)
 	}(time.Now())
 	return l.next.MostRecentReposByLanguage(ctx, language, limit)
 }
@@ -136,11 +116,7 @@ func (l *loggingMiddleware) MostStars(ctx context.Context, limit int) (res []sch
 			logger.Duration(start),
 			zap.Int("limit", limit))
 
-		if err != nil {
-			L.Warn("error getting repos with most stars", zap.Error(err))
-		} else {
-			L.Info("got repos with most stars", zap.Int("count", len(res)))
-		}
+		logger.Maybe(L, "get repos with most stars", err)
 	}(time.Now())
 	return l.next.MostStars(ctx, limit)
 }
@@ -152,11 +128,7 @@ func (l *loggingMiddleware) MostForks(ctx context.Context, limit int) (res []sch
 			logger.Duration(start),
 			zap.Int("limit", limit))
 
-		if err != nil {
-			L.Warn("error getting repos with most forks", zap.Error(err))
-		} else {
-			L.Info("got repos with most forks", zap.Int("count", len(res)))
-		}
+		logger.Maybe(L, "get repos with most forks", err)
 	}(time.Now())
 	return l.next.MostForks(ctx, limit)
 }
@@ -168,11 +140,7 @@ func (l *loggingMiddleware) RepoCountByUser(ctx context.Context, limit int) (res
 			logger.Duration(start),
 			zap.Int("limit", limit))
 
-		if err != nil {
-			L.Warn("error getting repo count by user", zap.Error(err))
-		} else {
-			L.Info("got repo count by user", zap.Int("count", len(res)))
-		}
+		logger.Maybe(L, "get repo count by user", err)
 	}(time.Now())
 	return l.next.RepoCountByUser(ctx, limit)
 }
@@ -185,11 +153,7 @@ func (l *loggingMiddleware) ReposByLanguage(ctx context.Context, language string
 			zap.String("language", language),
 			zap.Int("limit", limit))
 
-		if err != nil {
-			L.Warn("error getting repos by language", zap.Error(err))
-		} else {
-			L.Info("got repos by language", zap.Int("count", len(res)))
-		}
+		logger.Maybe(L, "get repos by language", err)
 	}(time.Now())
 	return l.next.ReposByLanguage(ctx, language, limit)
 }
@@ -201,11 +165,7 @@ func (l *loggingMiddleware) Distinct(ctx context.Context, field string) (res []s
 			logger.Duration(start),
 			zap.String("field", field))
 
-		if err != nil {
-			L.Warn("error getting distinct login", zap.Error(err))
-		} else {
-			L.Info("got distinct login", zap.Int("count", len(res)))
-		}
+		logger.Maybe(L, "get distinct login", err)
 	}(time.Now())
 	return l.next.Distinct(ctx, field)
 }
@@ -213,7 +173,7 @@ func (l *loggingMiddleware) Distinct(ctx context.Context, field string) (res []s
 func (l *loggingMiddleware) GetProfile(ctx context.Context, login string) (p *usersvc.User, err error) {
 	L := logger.Wrap(ctx, l.logger)
 	defer func(start time.Time) {
-		L.Info("got profile",
+		L.Info("get profile",
 			logger.Method("GetProfile"),
 			logger.Duration(start),
 			zap.String("login", login),
