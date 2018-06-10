@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/rs/xid"
-
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -72,6 +72,12 @@ func New() *Logger {
 	}
 
 	// TODO: Inject application version so that it is visible in the logs
+
+	version := viper.GetString("version")
+	if version != "" {
+		l = l.With(zap.String("version", version))
+	}
+
 	zap.ReplaceGlobals(l)
 	return l
 }
