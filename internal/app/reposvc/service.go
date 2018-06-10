@@ -9,9 +9,13 @@ package reposvc
 
 import (
 	"context"
+	"sort"
+	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/app/usersvc"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/bow"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/constant"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
 )
 
@@ -53,7 +57,17 @@ func (s *service) Count(ctx context.Context) (int, error) {
 }
 
 func (s *service) LastCreatedBy(ctx context.Context, login string) (string, bool) {
-	return s.model.LastCreatedBy(login)
+	repo, err := s.model.LastCreatedBy(login)
+	if err != nil || repo == nil {
+		return constant.GithubCreatedAt, false
+	}
+	t, err := time.Parse(time.RFC3339, repo.CreatedAt)
+	if err != nil {
+		return constant.GithubCreatedAt, false
+	}
+	// Deduct a day
+	t = t.AddDate(0, -1, 0)
+	return t.Format("2006-01-02"), true
 }
 
 func (s *service) MostPopularLanguage(ctx context.Context, limit int) ([]schema.LanguageCount, error) {
@@ -89,5 +103,51 @@ func (s *service) Distinct(ctx context.Context, field string) ([]string, error) 
 }
 
 func (s *service) GetProfile(ctx context.Context, login string) (*usersvc.User, error) {
-	return s.model.GetProfile(login)
+	var watchers, stargazers, forks int64
+	var languageList []string
+	var descriptions []string
+
+	var keywords []schema.Keyword
+	var languages []schema.LanguageCount
+
+	repos, err := s.model.ReposBy(login)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < len(repos); i++ {
+		repo := repos[i]
+		stargazers += repo.Stargazers
+		watchers += repo.Watchers
+		forks += repo.Forks
+		languageList = append(languageList, repo.Languages...)
+		descriptions = append(descriptions, repo.Description)
+	}
+
+	topKeywords := bow.Top(bow.Parse(descriptions...), 20)
+	for _, k := range topKeywords {
+		keywords = append(keywords, schema.Keyword{ID: k.Key, Value: k.Value})
+	}
+	sort.SliceStable(keywords, func(i, j int) bool {
+		return keywords[i].Value > keywords[j].Value
+	})
+
+	topLanguages := bow.Top(languageList, 20)
+	for _, k := range topLanguages {
+		languages = append(languages, schema.LanguageCount{Name: k.Key, Count: k.Value})
+	}
+	sort.SliceStable(languages, func(i, j int) bool {
+		return languages[i].Count > languages[j].Count
+	})
+
+	return &usersvc.User{
+		Login: login,
+		Profile: schema.Profile{
+			Watchers:   watchers,
+			Stargazers: stargazers,
+			Forks:      forks,
+			Keywords:   keywords,
+			Languages:  languages,
+		},
+	}, nil
 }

@@ -10,6 +10,10 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// While it is not necessary, separating the read and write can be beneficial
+// when you need to use two different database access which has constraints
+// on the read and write
+
 type (
 	// Read defines all read operations by the store
 	Read interface {
@@ -47,10 +51,7 @@ type (
 
 // NewStore returns a new store
 func NewStore(db *database.DB, collection string) Store {
-	return &store{
-		db:         db,
-		collection: collection,
-	}
+	return &store{db, collection}
 }
 
 func (s *store) Init() error {

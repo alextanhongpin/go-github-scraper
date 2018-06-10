@@ -4,22 +4,20 @@ package reposvc
 // Custom errors should also be thrown here.
 // If the model does not fulfil the business requirements, it should not call the store.
 // For orchestration (facade pattern), perform it at the service level
+// Model should not have any knowledge of context
+// Model should have all the params required explicitly defined at the arguments
 
 import (
 	"errors"
 	"log"
-	"sort"
-	"time"
 
-	"github.com/alextanhongpin/go-github-scraper/internal/app/usersvc"
-	"github.com/alextanhongpin/go-github-scraper/internal/pkg/bow"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
-	"github.com/alextanhongpin/go-github-scraper/internal/pkg/constant"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
 )
 
 var (
-	ErrInvalidLanguage = errors.New("language provided is not valid")
+	ErrInvalidLanguage = errors.New("language is required")
+	ErrInvalidLogin    = errors.New("login is required")
 )
 
 type (
@@ -29,7 +27,7 @@ type (
 		Count() (int, error)
 		Drop() error
 		Init() error
-		LastCreatedBy(login string) (string, bool)
+		LastCreatedBy(login string) (*schema.Repo, error)
 		LanguageCountByUser(login string, limit int) ([]schema.LanguageCount, error)
 		MostPopularLanguage(limit int) ([]schema.LanguageCount, error)
 		MostRecent(limit int) ([]schema.Repo, error)
@@ -39,7 +37,8 @@ type (
 		RepoCountByUser(limit int) ([]schema.UserCount, error)
 		ReposByLanguage(language string, limit int) ([]schema.UserCount, error)
 		Distinct(field string) ([]string, error)
-		GetProfile(login string) (*usersvc.User, error)
+		// GetProfile(login string) (*usersvc.User, error)
+		ReposBy(login string) ([]schema.Repo, error)
 	}
 
 	model struct {
@@ -81,47 +80,36 @@ func (m *model) Init() error {
 }
 
 // LastCreatedBy returns the last created datetime in the format YYYY-MM-DD for a particular user
-func (m *model) LastCreatedBy(login string) (string, bool) {
-	repo, err := m.store.LastCreatedBy(login)
-	if err != nil || repo == nil {
-		// Github's creation date
-		return constant.GithubCreatedAt, false
+func (m *model) LastCreatedBy(login string) (*schema.Repo, error) {
+	if login == "" {
+		return nil, ErrInvalidLogin
 	}
-	t, err := time.Parse(time.RFC3339, repo.CreatedAt)
-	if err != nil {
-		return constant.GithubCreatedAt, false
-	}
-	// Deduct a day
-	t = t.AddDate(0, -1, 0)
-	return t.Format("2006-01-02"), true
+	return m.store.LastCreatedBy(login)
 }
 
 // LanguageCountByUser returns the top languages for a particular user
 func (m *model) LanguageCountByUser(login string, limit int) ([]schema.LanguageCount, error) {
+	if login == "" {
+		return nil, ErrInvalidLogin
+	}
 	return m.store.LanguagesBy(login, limit)
 }
 
 // MostPopularLanguage returns the most frequent language based on repo count in descending order
 func (m *model) MostPopularLanguage(limit int) ([]schema.LanguageCount, error) {
-	if limit < 1 {
-		limit = 10
-	}
+	limit = setLimit(limit)
 	return m.store.Languages(limit)
 }
 
 // MostRecent returns a limited results of repo that are recently updated
 func (m *model) MostRecent(limit int) ([]schema.Repo, error) {
-	if limit < 1 {
-		limit = 10
-	}
+	limit = setLimit(limit)
 	return m.store.FindAll(limit, []string{"-updatedAt"})
 }
 
 // MostRecentReposByLanguage returns the most recent repos that are updated for a given language
 func (m *model) MostRecentReposByLanguage(language string, limit int) ([]schema.Repo, error) {
-	if limit < 1 {
-		limit = 10
-	}
+	limit = setLimit(limit)
 	if language == "" {
 		return nil, ErrInvalidLanguage
 	}
@@ -130,34 +118,25 @@ func (m *model) MostRecentReposByLanguage(language string, limit int) ([]schema.
 
 // MostStars returns a limited results of repos with the most stars
 func (m *model) MostStars(limit int) ([]schema.Repo, error) {
-	if limit < 1 {
-		limit = 10
-	}
+	limit = setLimit(limit)
 	return m.store.FindAll(limit, []string{"-stargazers"})
 }
 
 // MostForks returns a limited results of repos with the most forks
 func (m *model) MostForks(limit int) ([]schema.Repo, error) {
-	if limit < 1 {
-		limit = 10
-	}
+	limit = setLimit(limit)
 	return m.store.FindAll(limit, []string{"-forks"})
 }
 
 // RepoCountByUser returns the users with most repos sorted in descending order
 func (m *model) RepoCountByUser(limit int) ([]schema.UserCount, error) {
-	if limit < 1 {
-		limit = 10
-	}
+	limit = setLimit(limit)
 	return m.store.GroupByUser(limit)
 }
 
 // ReposByLanguage returns the users with the most repo in the particular language
 func (m *model) ReposByLanguage(language string, limit int) ([]schema.UserCount, error) {
-	if limit < 1 {
-		limit = 10
-	}
-
+	limit = setLimit(limit)
 	if language == "" {
 		return nil, ErrInvalidLanguage
 	}
@@ -169,54 +148,16 @@ func (m *model) Distinct(field string) ([]string, error) {
 	return m.store.Distinct(field)
 }
 
-// GetProfile should return a profile for a given login
-func (m *model) GetProfile(login string) (*usersvc.User, error) {
-	var watchers, stargazers, forks int64
-	var languageList []string
-	var descriptions []string
+func (m *model) ReposBy(login string) ([]schema.Repo, error) {
+	return m.store.ReposBy(login)
+}
 
-	var keywords []schema.Keyword
-	var languages []schema.LanguageCount
-
-	// TODO: Fix error here
-	repos, err := m.store.ReposBy(login)
-	if err != nil {
-		return nil, err
+func setLimit(limit int) int {
+	if limit < 1 {
+		return 10
 	}
-
-	for i := 0; i < len(repos); i++ {
-		repo := repos[i]
-		stargazers += repo.Stargazers
-		watchers += repo.Watchers
-		forks += repo.Forks
-		languageList = append(languageList, repo.Languages...)
-		descriptions = append(descriptions, repo.Description)
+	if limit > 100 {
+		return 100
 	}
-
-	topKeywords := bow.Top(bow.Parse(descriptions...), 20)
-	for _, k := range topKeywords {
-		keywords = append(keywords, schema.Keyword{ID: k.Key, Value: k.Value})
-	}
-	sort.SliceStable(keywords, func(i, j int) bool {
-		return keywords[i].Value > keywords[j].Value
-	})
-
-	topLanguages := bow.Top(languageList, 20)
-	for _, k := range topLanguages {
-		languages = append(languages, schema.LanguageCount{Name: k.Key, Count: k.Value})
-	}
-	sort.SliceStable(languages, func(i, j int) bool {
-		return languages[i].Count > languages[j].Count
-	})
-
-	return &usersvc.User{
-		Login: login,
-		Profile: schema.Profile{
-			Watchers:   watchers,
-			Stargazers: stargazers,
-			Forks:      forks,
-			Keywords:   keywords,
-			Languages:  languages,
-		},
-	}, nil
+	return limit
 }

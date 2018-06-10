@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/rs/xid"
 
@@ -28,11 +29,22 @@ func WrapContextWithRequestID(ctx context.Context) context.Context {
 }
 
 // Wrap takes a context and existing logger and returns the logger with the injected correlation request id
-func Wrap(ctx context.Context, l *Logger) *Logger {
+func Wrap(ctx context.Context, l *Logger, fields ...zap.Field) *Logger {
 	if v := ctx.Value(RequestID); v != nil {
-		return l.With(zap.String("requestId", v.(string)))
+		fields = append(fields, zap.String("requestId", v.(string)))
+		return l.With(fields...)
 	}
 	return l
+}
+
+// Method is a custom logger field to returns the field Method
+func Method(m string) zap.Field {
+	return zap.String("method", m)
+}
+
+// Duration is a custom logger field to return the field Duration
+func Duration(s time.Time) zap.Field {
+	return zap.Duration("took", time.Since(s))
 }
 
 // New returns a new logger
@@ -49,6 +61,8 @@ func New() *Logger {
 	} else {
 		l = l.With(zap.String("hostname", hostname))
 	}
+
+	// TODO: Inject application version so that it is visible in the logs
 	zap.ReplaceGlobals(l)
 	return l
 }
