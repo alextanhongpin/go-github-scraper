@@ -38,11 +38,15 @@ func (m *tracingMiddleware) LastCreatedBy(ctx context.Context, login string) (st
 	ctx, span := trace.StartSpan(ctx, "LastCreatedBy")
 	defer span.End()
 
+	span.AddAttributes(trace.StringAttribute("login", login))
+
 	return m.service.LastCreatedBy(ctx, login)
 }
 func (m *tracingMiddleware) MostPopularLanguage(ctx context.Context, limit int) ([]schema.LanguageCount, error) {
 	ctx, span := trace.StartSpan(ctx, "MostPopularLanguage")
 	defer span.End()
+
+	span.AddAttributes(trace.Int64Attribute("limit", int64(limit)))
 
 	return m.service.MostPopularLanguage(ctx, limit)
 }
@@ -50,11 +54,17 @@ func (m *tracingMiddleware) MostRecent(ctx context.Context, limit int) ([]schema
 	ctx, span := trace.StartSpan(ctx, "MostRecent")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("limit", int64(limit)))
+
 	return m.service.MostRecent(ctx, limit)
 }
 func (m *tracingMiddleware) MostRecentReposByLanguage(ctx context.Context, language string, limit int) ([]schema.Repo, error) {
 	ctx, span := trace.StartSpan(ctx, "MostRecentReposByLanguage")
 	defer span.End()
+
+	span.AddAttributes(
+		trace.StringAttribute("language", language),
+		trace.Int64Attribute("limit", int64(limit)))
 
 	return m.service.MostRecentReposByLanguage(ctx, language, limit)
 }
@@ -62,11 +72,15 @@ func (m *tracingMiddleware) MostStars(ctx context.Context, limit int) ([]schema.
 	ctx, span := trace.StartSpan(ctx, "MostStars")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("limit", int64(limit)))
+
 	return m.service.MostStars(ctx, limit)
 }
 func (m *tracingMiddleware) MostForks(ctx context.Context, limit int) ([]schema.Repo, error) {
 	ctx, span := trace.StartSpan(ctx, "MostForks")
 	defer span.End()
+
+	span.AddAttributes(trace.Int64Attribute("limit", int64(limit)))
 
 	return m.service.MostForks(ctx, limit)
 }
@@ -74,11 +88,17 @@ func (m *tracingMiddleware) RepoCountByUser(ctx context.Context, limit int) ([]s
 	ctx, span := trace.StartSpan(ctx, "RepoCountByUser")
 	defer span.End()
 
+	span.AddAttributes(trace.Int64Attribute("limit", int64(limit)))
+
 	return m.service.RepoCountByUser(ctx, limit)
 }
 func (m *tracingMiddleware) ReposByLanguage(ctx context.Context, language string, limit int) ([]schema.UserCount, error) {
 	ctx, span := trace.StartSpan(ctx, "ReposByLanguage")
 	defer span.End()
+
+	span.AddAttributes(
+		trace.StringAttribute("language", language),
+		trace.Int64Attribute("limit", int64(limit)))
 
 	return m.service.ReposByLanguage(ctx, language, limit)
 }
@@ -86,11 +106,15 @@ func (m *tracingMiddleware) Distinct(ctx context.Context, login string) ([]strin
 	ctx, span := trace.StartSpan(ctx, "Distinct")
 	defer span.End()
 
+	span.AddAttributes(trace.StringAttribute("login", login))
+
 	return m.service.Distinct(ctx, login)
 }
 func (m *tracingMiddleware) GetProfile(ctx context.Context, login string) (*usersvc.User, error) {
 	ctx, span := trace.StartSpan(ctx, "GetProfile")
 	defer span.End()
+
+	span.AddAttributes(trace.StringAttribute("login", login))
 
 	return m.service.GetProfile(ctx, login)
 }
