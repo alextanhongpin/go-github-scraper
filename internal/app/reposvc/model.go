@@ -92,6 +92,7 @@ func (m *model) LanguageCountByUser(login string, limit int) ([]schema.LanguageC
 	if login == "" {
 		return nil, ErrInvalidLogin
 	}
+	limit = setLimit(limit)
 	return m.store.LanguagesBy(login, limit)
 }
 
