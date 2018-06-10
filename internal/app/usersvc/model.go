@@ -1,11 +1,10 @@
 package usersvc
 
 import (
+	"errors"
 	"log"
-	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
-	"github.com/alextanhongpin/go-github-scraper/internal/pkg/constant"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
 )
 
@@ -19,7 +18,7 @@ type (
 		Drop() error
 		FindByCompany(company string) ([]schema.User, error)
 		FindOne(login string) (*User, error)
-		FindLastCreated() (string, bool)
+		FindLastCreated() (*User, error)
 		FindLastFetched(limit int) ([]User, error)
 		MostRecent(limit int) ([]User, error)
 		Init() error
@@ -32,6 +31,10 @@ type (
 	model struct {
 		store Store
 	}
+)
+
+var (
+	ErrInvalidLogin = errors.New("login provided is invalid")
 )
 
 // NewModel returns a new model with the store
@@ -48,14 +51,21 @@ func (m *model) Init() error {
 }
 
 func (m *model) MostRecent(limit int) ([]User, error) {
+	limit = setLimit(limit)
 	return m.store.FindAll(limit, []string{"-createdAt"})
 }
 
 func (m *model) BulkUpsert(users []github.User) error {
+	if len(users) == 0 {
+		return nil
+	}
 	return m.store.BulkUpsert(users)
 }
 
 func (m *model) BulkUpdate(users []User) error {
+	if len(users) == 0 {
+		return nil
+	}
 	return m.store.BulkUpdate(users)
 }
 
@@ -65,17 +75,8 @@ func (m *model) Drop() error {
 
 // FindLastCreated returns the last created date in the format YYYY-MM-DD, and a boolean to indicate
 // if the value returned exists or is default
-func (m *model) FindLastCreated() (string, bool) {
-	user, err := m.store.FindLastCreated()
-	if err != nil || user == nil {
-		return constant.GithubCreatedAt, false
-	}
-	t, err := time.Parse(time.RFC3339, user.CreatedAt)
-	if err != nil {
-		return constant.GithubCreatedAt, false
-	}
-	t = t.AddDate(0, -1, 0)
-	return t.Format("2006-01-02"), true
+func (m *model) FindLastCreated() (*User, error) {
+	return m.store.FindLastCreated()
 }
 
 func (m *model) FindByCompany(company string) ([]schema.User, error) {
@@ -83,6 +84,7 @@ func (m *model) FindByCompany(company string) ([]schema.User, error) {
 }
 
 func (m *model) FindLastFetched(limit int) ([]User, error) {
+	limit = setLimit(limit)
 	return m.store.FindAll(limit, []string{"fetchedAt"})
 }
 
@@ -91,10 +93,16 @@ func (m *model) Count() (int, error) {
 }
 
 func (m *model) UpdateOne(login string) (err error) {
+	if login == "" {
+		return ErrInvalidLogin
+	}
 	return m.store.UpdateOne(login)
 }
 
 func (m *model) FindOne(login string) (*User, error) {
+	if login == "" {
+		return nil, ErrInvalidLogin
+	}
 	return m.store.FindOne(login)
 }
 
@@ -112,4 +120,14 @@ func (m *model) AggregateCompany(min, max int) ([]schema.Company, error) {
 
 func (m *model) DistinctCompany() ([]string, error) {
 	return m.store.DistinctCompany()
+}
+
+func setLimit(limit int) int {
+	if limit < 0 {
+		return 10
+	}
+	if limit > 100 {
+		return 100
+	}
+	return limit
 }

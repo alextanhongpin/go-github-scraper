@@ -2,8 +2,10 @@ package usersvc
 
 import (
 	"context"
+	"time"
 
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/client/github"
+	"github.com/alextanhongpin/go-github-scraper/internal/pkg/constant"
 	"github.com/alextanhongpin/go-github-scraper/internal/pkg/schema"
 )
 
@@ -32,7 +34,16 @@ func NewService(m Model) Service {
 }
 
 func (s *service) FindLastCreated(ctx context.Context) (string, bool) {
-	return s.model.FindLastCreated()
+	user, err := s.model.FindLastCreated()
+	if err != nil || user == nil {
+		return constant.GithubCreatedAt, false
+	}
+	t, err := time.Parse(time.RFC3339, user.CreatedAt)
+	if err != nil {
+		return constant.GithubCreatedAt, false
+	}
+	t = t.AddDate(0, -1, 0)
+	return t.Format("2006-01-02"), true
 }
 
 func (s *service) BulkUpsert(ctx context.Context, users []github.User) error {
